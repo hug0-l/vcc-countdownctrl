@@ -161,6 +161,12 @@
             background-color: #090d16; border: 1px solid #374151; color: #fff; padding: 8px 10px; border-radius: 4px; font-size: 13px; outline: none;
         }
         .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary-color); }
+        /* 窄螢幕響應式: 768px 以下調整表單成單欄 */
+        @media (max-width: 768px) {
+            .input-form { grid-template-columns: 1fr; }
+            .input-form .input-group input[type="text"] { font-size: 16px; padding: 10px 8px; }
+            .input-group.full-width { grid-column: span 1; }
+        }
 
         /* 頂部全局控制列 */
         .global-filter-bar {
@@ -394,7 +400,18 @@
                         <div class="mcr-tag-live" id="mcrLiveTag" style="display: none;">ON AIR</div>
                         <div class="mcr-label-sub">📡 當前播放節目 (Current Programme)</div>
                         <div class="mcr-prog-title" id="mcrOnAirTitle">無常規節目播出 (IDLE)</div>
-                        <div class="mcr-prog-countdown" id="mcrOnAirCountdown">系統靜態待命</div>
+                        <div class="mcr-prog-countdown" id="mcrOnAirCountdown">系統靜態待命</div>                        
+                        <button id="btnQuickEdit" style="float:right; background:transparent; border:1px solid #4b5563; color:#9ca3af; border-radius:4px; cursor:pointer; font-size:11px; padding:2px 8px; margin-top:5px;" onclick="toggleQuickEdit()">✏️ 快速修改</button>
+
+                        <div id="mcrQuickEdit" style="display:none; margin-top:10px; padding:10px; background:rgba(0,0,0,0.3); border-radius:6px;">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <label style="font-size:11px; color:#9ca3af;">開始: <input type="text" id="quickStartTime" style="width:130px; background:#090d16; border:1px solid #374151; color:#fff; padding:4px 6px; border-radius:3px; font-size:12px; font-family:monospace;"></label>
+                                <label style="font-size:11px; color:#9ca3af;">長度: <input type="text" id="quickDuration" style="width:130px; background:#090d16; border:1px solid #374151; color:#fff; padding:4px 6px; border-radius:3px; font-size:12px; font-family:monospace;"></label>
+                                <button class="btn-add" onclick="applyQuickEdit()" style="padding:4px 12px; font-size:11px;">套用</button>
+                                <button class="btn-cancel" onclick="cancelQuickEdit()" style="padding:4px 12px; font-size:11px;">取消</button>
+                            </div>
+                        </div>
+
 
                         <div class="mcr-next-bar">
                             <div class="mcr-label-sub" style="margin-bottom: 2px;">➔ 下一檔預備接續 (Next Up)</div>
@@ -420,6 +437,13 @@
                         </div>
                     </div>
 
+                </div>
+
+                <div id="homeCueCountdown" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border:2px solid #818cf8; border-radius:10px; padding:20px; margin-bottom:20px; text-align:center; box-shadow:0 0 24px rgba(129,140,248,0.2);">
+                    <div style="font-size:11px; color:#a5b4fc; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">⏱ 下一個 Cue 倒數</div>
+                    <div id="cueCountdownLabel" style="font-size:14px; color:#c7d2fe; margin-bottom:4px;">—</div>
+                    <div id="cueCountdownTimer" style="font-family:'Courier New',monospace; font-size:48px; font-weight:bold; color:#e0e7ff; text-shadow:0 0 12px rgba(165,180,252,0.5);">--:--</div>
+                    <div id="cueCountdownMeta" style="font-size:12px; color:#a5b4fc; margin-top:6px;"></div>
                 </div>
 
                 <div class="panel-box">
@@ -503,14 +527,16 @@
                             </div>
                             <div class="input-group">
                                 <label>開播時碼 (TC)</label>
-                                <div style="display:flex; gap:6px;">
-                                    <input type="text" id="startTimeStr" placeholder="18:30:00:00" style="flex:1;">
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <input type="text" id="startTimeStr" placeholder="18:30:00:00" style="flex:1; min-width:160px;">
                                     <button class="btn-sync" onclick="setStartTimeOneMinLater()" style="padding:4px 8px; font-size:11px; white-space:nowrap;">⏱ 一分鐘後</button>
                                 </div>
                             </div>
                             <div class="input-group">
                                 <label>長度</label>
-                                <input type="text" id="durationStr" placeholder="00:30:00:00" value="00:30:00:00">
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                    <input type="text" id="durationStr" placeholder="00:30:00:00" style="flex:1; min-width:160px;">
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label>週期</label>
@@ -983,7 +1009,7 @@
     // ============================================================================
 
     // ===== 資料儲存（同步 localStorage） =====
-
+    
     function getDataSet() {
         return {
             version: 2,
@@ -1646,6 +1672,8 @@
 
         setupTimecodeMask('startTimeStr');
         setupTimecodeMask('durationStr');
+        setupTimecodeMask('quickStartTime');
+        setupTimecodeMask('quickDuration');
 
         // 載入儲存的設定（FPS、beep、上次日期等）
         loadConfig();
@@ -1656,7 +1684,7 @@
         else { loadDefaultPresets(); }
         const localDB = localStorage.getItem('vcc_pre_master_db_v8');
         if (localDB) { try { masterScheduleDB = JSON.parse(localDB); } catch(e) { masterScheduleDB = []; } }
-
+        
         // 使用 localStorage 資料，無 IndexedDB
 
         // 填入時區下拉選項
@@ -1736,7 +1764,8 @@
         { id: "alert",       label: "急促 Alert (3x)", freq: 2000, dur: 0.1,  repeats: 3, gap: 0.06, type: "square" },
         { id: "chime",       label: "柔和 Chime",      freq: 1500, dur: 0.5,  repeats: 1, gap: 0,    type: "sine" },
         { id: "bell",        label: "低沈 Bell",       freq: 400,  dur: 0.5,  repeats: 1, gap: 0,    type: "sine" },
-        { id: "tone",        label: "標準 Tone",       freq: 1000, dur: 0.3,  repeats: 1, gap: 0,    type: "sine" }
+        { id: "tone",        label: "標準 Tone",       freq: 1000, dur: 0.3,  repeats: 1, gap: 0,    type: "sine" },
+        { id: "silent",      label: "靜音 (無提示)",    freq: 0,    dur: 0,    repeats: 0, gap: 0,    type: "sine" }
     ];
 
     // =============================================
@@ -1859,6 +1888,7 @@
         const sel = row.querySelector('.soundSelect');
         if (!sel) return;
         let soundId = sel.value;
+        if (soundId === "silent") { writeLog("🔇 靜音模式，無提示音", 'info'); return; }
         let preset = null;
         for (let i = 0; i < soundPresets.length; i++) {
             if (soundPresets[i].id === soundId) { preset = soundPresets[i]; break; }
@@ -1948,18 +1978,28 @@
 
         const data = [];
         rows.forEach(function(row) {
+            const sec = mmssToSec(row.querySelector('.offsetSec').value);
+            const type = row.querySelector('.offsetType').value;
             data.push({
-                offsetType: row.querySelector('.offsetType').value,
-                offsetSec: mmssToSec(row.querySelector('.offsetSec').value),
+                offsetType: type,
+                offsetSec: sec,
                 nodeName: row.querySelector('.nodeName').value.trim(),
-                soundId: row.querySelector('.soundSelect').value
+                soundId: row.querySelector('.soundSelect').value,
+                chronoKey: (
+                    type === "開始前" ? -sec :
+                    type === "開始後" ? 1000000 + sec :
+                    type === "結束前" ? 2000000 - sec :
+                    3000000
+                )
             });
         });
 
         data.sort(function(a, b) {
-            let va = a[field], vb = b[field];
-            if (field === 'offsetSec') { va = parseInt(va) || 0; vb = parseInt(vb) || 0; }
-            else { va = (va || '').toString().toLowerCase(); vb = (vb || '').toString().toLowerCase(); }
+            if (field === 'offsetSec') {
+                return presetSortState.asc ? (a.chronoKey - b.chronoKey) : (b.chronoKey - a.chronoKey);
+            }
+            let va = (a[field] || '').toString().toLowerCase();
+            let vb = (b[field] || '').toString().toLowerCase();
             return presetSortState.asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va < vb ? 1 : va > vb ? -1 : 0);
         });
 
@@ -2267,6 +2307,52 @@
         const later = new Date(now.getTime() + 60 * 1000);
         document.getElementById('startTimeStr').value = dateToTimecode(later);
         writeLog("⏱ 已填入「一分鐘後」時碼: " + dateToTimecode(later), 'info');
+    }
+
+    // ===== 快速修改（首頁 MCR 快速編輯 Start Time & Duration） =====
+    let quickEditTargetId = null;
+    function toggleQuickEdit() {
+        const panel = document.getElementById('mcrQuickEdit');
+        if (!panel) return;
+        if (panel.style.display === 'none' || panel.style.display === '') {
+            const targetDateStr = document.getElementById('globalTargetDate').value;
+            const activeList = getExpandedRundownForDate(targetDateStr);
+            const currentTotalFrames = timecodeToTotalFrames(dateToTimecode(getCalibratedDate()));
+            let target = null;
+            activeList.forEach(function(p) {
+                const sf = timecodeToTotalFrames(p.startTime);
+                const ef = sf + timecodeToTotalFrames(p.duration);
+                if (currentTotalFrames >= sf && currentTotalFrames <= ef) target = p;
+            });
+            if (!target) { alert('目前無播出中節目'); return; }
+            quickEditTargetId = target.id;
+            document.getElementById('quickStartTime').value = target.startTime;
+            document.getElementById('quickDuration').value = target.duration;
+            panel.style.display = 'block';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+    function applyQuickEdit() {
+        if (!quickEditTargetId) return;
+        const newStart = document.getElementById('quickStartTime').value;
+        const newDur = document.getElementById('quickDuration').value;
+        const target = masterScheduleDB.find(function(p) { return p.id === quickEditTargetId; });
+        if (target) {
+            target.startTime = newStart;
+            target.duration = newDur;
+            saveToLocalStorage();
+            calculateMCRTrafficSummary();
+            renderRundownUI();
+            if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+            writeLog('已快速修改節目 [' + target.name + '] 的開始時間與長度', 'warn');
+        }
+        cancelQuickEdit();
+    }
+    function cancelQuickEdit() {
+        quickEditTargetId = null;
+        const panel = document.getElementById('mcrQuickEdit');
+        if (panel) panel.style.display = 'none';
     }
 
     // ===== Tag & Color Label 管理 =====
@@ -2873,6 +2959,26 @@
                     block.style.backgroundColor = MATRIX_COLORS[cIdx];
                     block.title = pn + ' [' + totalFramesToTimecode(pd.startFrames).substring(0,5) + ' – ' + totalFramesToTimecode(pd.endFrames).substring(0,5) + ']';
                     bar.appendChild(block);
+                    block.addEventListener('mouseenter', function(e) {
+                        const tt = document.getElementById('timelineTooltip');
+                        if (tt) {
+                            tt.innerHTML = '<b>' + pn + '</b><br>開始: ' + totalFramesToTimecode(pd.startFrames) +
+                                           '<br>結束: ' + totalFramesToTimecode(pd.endFrames) +
+                                           '<br>長度: ' + totalFramesToTimecode(pd.endFrames - pd.startFrames);
+                            tt.style.display = 'block';
+                        }
+                    });
+                    block.addEventListener('mousemove', function(e) {
+                        const tt = document.getElementById('timelineTooltip');
+                        if (tt && tt.style.display === 'block') {
+                            tt.style.left = (e.clientX + 16) + 'px';
+                            tt.style.top = (e.clientY - 40) + 'px';
+                        }
+                    });
+                    block.addEventListener('mouseleave', function() {
+                        const tt = document.getElementById('timelineTooltip');
+                        if (tt) tt.style.display = 'none';
+                    });
                 }
 
                 // Cue tick 刻度（疊加在色塊上）
@@ -3018,6 +3124,27 @@
                 } else {
                     nextCueEl.innerHTML = '<span style="color:#64748b;">— 無後續 Cue</span>';
                 }
+
+                // Update home page Cue countdown
+                const cueCDLabel = document.getElementById('cueCountdownLabel');
+                const cueCDTimer = document.getElementById('cueCountdownTimer');
+                const cueCDMeta = document.getElementById('cueCountdownMeta');
+                if (cueCDLabel && cueCDTimer && cueCDMeta) {
+                    if (upcomingCueIdx >= 0) {
+                        const uc = globalTriggers[upcomingCueIdx];
+                        const diffFrames = uc.targetFrames - currentTotalFrames;
+                        const diffSec = Math.max(0, Math.ceil(diffFrames / frameRate));
+                        const mm = Math.floor(diffSec / 60);
+                        const ss = diffSec % 60;
+                        cueCDLabel.innerText = uc.progName + ' — ' + uc.cueName;
+                        cueCDTimer.innerText = String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+                        cueCDMeta.innerText = '目標: ' + uc.timecodeStr + ' | 剩餘 ' + diffSec + ' 秒';
+                    } else {
+                        cueCDLabel.innerText = '—';
+                        cueCDTimer.innerText = '--:--';
+                        cueCDMeta.innerText = '尚無後續 Cue';
+                    }
+                }
             }
 
             const windowStart = Math.max(0, nearestIdx - 3);
@@ -3109,7 +3236,7 @@
         popup.innerHTML = '🚨 <span style="font-size:20px;">CUE 觸發！</span><br><span style="font-size:14px;opacity:0.9;">' + progName + ' — ' + cueName + '</span><br><span style="font-size:11px;opacity:0.6;display:block;margin-top:6px;">點擊關閉</span>';
         popup.style.display = 'block';
         popup.onclick = function() { popup.style.display = 'none'; };
-
+        
         if (cuePopupTimer) clearTimeout(cuePopupTimer);
         cuePopupTimer = setTimeout(function() {
             if (popup) popup.style.display = 'none';
@@ -3117,6 +3244,7 @@
     }
 
     function playBroadcastBeep(customFreq, presetObj) {
+        if (customFreq === 0 || (presetObj && presetObj.id === "silent")) return;
         try {
             const actx = window.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
             if (actx.state === 'suspended') actx.resume();
@@ -3242,5 +3370,6 @@
 
     function factoryResetStorage() { if (confirm("確定工廠重置？")) { localStorage.clear(); location.reload(); } }
 </script>
+<div id="timelineTooltip" style="display:none; position:fixed; z-index:9999; background:#1e293b; color:#f1f5f9; padding:8px 12px; border-radius:6px; font-size:12px; font-family:monospace; border:1px solid #475569; box-shadow:0 4px 16px rgba(0,0,0,0.5); pointer-events:none; white-space:nowrap;"></div>
 </body>
 </html>
