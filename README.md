@@ -32,13 +32,8 @@
 ```
 RTHKVCC/
 ├── VPre_CountdownCtrl_TEST.html      # ✅ 主系統 SPA（本文件描述對象）
-├── VPre_CountdownCtrl_GUI.py         # Python GUI 輔助（WebSocket 遠端控制）
-├── VPre_CountdownControl_Fork.py     # Python 版 Fork（測試用參考）
 ├── VPre_CountdownCtrl_PROD_v0.5.html # 正式版 HTML（與 TEST 同步）
-├── VPre_CountdownCtrl_ARCHITECTURE.md # 📄 本架構文件
-├── signal_server.py                  # 信令伺服器（用於 VCC Clipper，非本系統）
-├── VCC_Clipper.html                  # VCC Clipper 工具（獨立專案）
-└── README.md                         # VCC Clipper 說明文件
+└── VPre_CountdownCtrl_ARCHITECTURE.md # 📄 本架構文件
 ```
 
 > ⚠️ `VPre_CountdownCtrl_TEST.html` 與 `VPre_CountdownCtrl_PROD_v0.5.html` 為同系統的測試版與正式版，兩者內容保持同步。
