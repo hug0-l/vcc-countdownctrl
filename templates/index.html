@@ -1806,32 +1806,64 @@ setTimeout(function() {
             gridBody.appendChild(emptyCell);
         }
 
-        // 預先計算每日節目數量（批次加速）
+        // 預先計算日期字串與星期（O(31)，避免在內層迴圈重複分配）
+        const dateStrings = [];
+        const dayOfWeeks = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+            const ds = calCurrentYear + "-" + String(calCurrentMonth + 1).padStart(2, '0') + "-" + String(day).padStart(2, '0');
+            dateStrings.push(ds);
+            dayOfWeeks.push(new Date(ds).getDay());
+        }
+        const lastDateStr = dateStrings[daysInMonth - 1];
+        const firstDateStr = dateStrings[0];
+
+        // 單次遍歷 masterScheduleDB（O(N+31)），並加入月範圍快速篩選
         const progCountCache = {};
         for (let day = 1; day <= daysInMonth; day++) {
-            let cellDateStr = calCurrentYear + "-" + String(calCurrentMonth + 1).padStart(2, '0') + "-" + String(day).padStart(2, '0');
-            let count = 0;
-            for (let d = 0; d < masterScheduleDB.length; d++) {
-                if (isProgramActiveOnDate(masterScheduleDB[d], cellDateStr)) count++;
+            progCountCache[day] = 0;
+        }
+        const progLen = masterScheduleDB.length;
+        for (let d = 0; d < progLen; d++) {
+            const prog = masterScheduleDB[d];
+            // 月範圍篩選：節目開始日期在本月最後一天之後，或結束日期在本月第一天之前，跳過
+            if (prog.broadcastDate > lastDateStr) continue;
+            if (prog.periodicEndDate && prog.periodicEndDate < firstDateStr) continue;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const ds = dateStrings[day - 1];
+                if (ds < prog.broadcastDate) continue;
+                if (prog.periodicType === 'none') {
+                    if (prog.broadcastDate === ds) progCountCache[day]++;
+                    continue;
+                }
+                if (prog.periodicEndDate && ds > prog.periodicEndDate) continue;
+                const dow = dayOfWeeks[day - 1];
+                if (prog.periodicType === 'daily') {
+                    progCountCache[day]++;
+                } else if (prog.periodicType === 'weekdays') {
+                    if (dow >= 1 && dow <= 5) progCountCache[day]++;
+                } else if (prog.periodicType === 'weekly') {
+                    const baseDow = new Date(prog.broadcastDate).getDay();
+                    if (baseDow === dow) progCountCache[day]++;
+                } else if (prog.periodicType === 'custom') {
+                    if ((prog.periodicDays || []).indexOf(dow) >= 0) progCountCache[day]++;
+                }
             }
-            progCountCache[day] = count;
         }
 
         for (let day = 1; day <= daysInMonth; day++) {
-            let cellDateStr = calCurrentYear + "-" + String(calCurrentMonth + 1).padStart(2, '0') + "-" + String(day).padStart(2, '0');
+            const cellDateStr = dateStrings[day - 1];
             const count = progCountCache[day];
 
             const cell = document.createElement('div');
             cell.className = "calendar-day-cell";
             cell.dataset.date = cellDateStr;
 
-            // 日期數字
             const daySpan = document.createElement('span');
             daySpan.style.cssText = 'font-weight:bold;line-height:1.2;';
             daySpan.innerText = day;
             cell.appendChild(daySpan);
 
-            // 節目數量標籤
             const countSpan = document.createElement('span');
             countSpan.className = 'calendar-prog-count';
             countSpan.innerText = count > 0 ? count + ' 節目' : '—';
