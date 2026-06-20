@@ -155,6 +155,8 @@ setTimeout(function() {
                         <div style="font-size: 11px; color: #6b7280;"><span style="color:#ef4444;">⬤</span> 最接近 <span style="color:#f59e0b;">●</span> 次接近 <span style="color:#64748b;">○</span> 其餘</div>
                     </div>
 
+                    <div id="matrixColorLegend" style="display:flex;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #1f2937;margin-bottom:8px;min-height:20px;"></div>
+
                     <!-- Timeline GUI 時間軸（按節目分層） -->
                     <div class="timeline-panel">
                         <div class="timeline-label" id="timelineRangeStart">--:--:--:--</div>
@@ -1863,11 +1865,11 @@ setTimeout(function() {
             if (hasOverlapConflict) {
                 conflictBlockEl.classList.add('alert-active');
                 conflictStatusEl.innerText = "⚠️ 時序重疊衝突";
-                conflictStatusEl.style.color = "const(--danger)";
+                conflictStatusEl.style.color = "var(--danger)";
             } else {
                 conflictBlockEl.classList.remove('alert-active');
                 conflictStatusEl.innerText = "● 安全正常";
-                conflictStatusEl.style.color = "const(--success)";
+                conflictStatusEl.style.color = "var(--success)";
             }
         }
     }
@@ -3373,7 +3375,7 @@ setTimeout(function() {
         const engineStatusEl = document.getElementById('homeEngineStatus');
         if (engineStatusEl) {
             engineStatusEl.innerText = "核心運算引擎：ON-AIR RUNNING";
-            engineStatusEl.style.color = "const(--warning)";
+            engineStatusEl.style.color = "var(--warning)";
         }
         const sideEng = document.getElementById('sidebarEngineStatus');
         if (sideEng) sideEng.innerText = '🟢 ENGINE ON-AIR';
@@ -3408,6 +3410,9 @@ setTimeout(function() {
                 progColorMap[name] = idx % 8;
             }
         });
+
+        // Render color legend
+        renderColorLegend(progColorMap);
 
         // Calculate timeline range from all programs
         timelineRange.minFrames = 86400*25;
@@ -3624,9 +3629,34 @@ setTimeout(function() {
         }
     }
 
+    // --- 矩陣顏色圖例 ---
+    function renderColorLegend(progColorMap) {
+        var el = document.getElementById('matrixColorLegend');
+        if (!el) return;
+        var names = Object.keys(progColorMap);
+        if (names.length === 0) { el.innerHTML = ''; return; }
+        var html = '';
+        names.forEach(function(name) {
+            var ci = progColorMap[name];
+            if (ci === undefined) ci = 0;
+            // ci could be a number (index) or a string (hex color). handle both:
+            var color;
+            if (typeof ci === 'number') {
+                color = MATRIX_COLORS[ci];
+            } else {
+                color = ci;  // direct hex color string
+            }
+            html += '<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:11px;">' +
+                '<span style="width:10px;height:10px;border-radius:2px;background:' + color + ';"></span>' +
+                '<span style="color:#cbd5e1;">' + escapeHtml(name) + '</span></span>';
+        });
+        el.innerHTML = html;
+    }
+
     // --- 儀表板核心動態運算 (整合首頁 Programme 檢視器、Timeline、矩陣) ---
     function updateGlobalDashboard() {
         try {
+            renderColorLegend(progColorMap);
             const now = getCalibratedDate();
             const currentTcStr = dateToTimecode(now);
             const clockEl = document.getElementById('clock');
