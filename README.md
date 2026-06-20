@@ -1,3 +1,28 @@
+# ⚡ 快速開始
+
+## 需求
+- Python 3.10+
+- 網路連線（NTP 校時用，可不連線但會降級至本地時鐘）
+
+## 安裝與啟動
+```bash
+# 1. 安裝依賴
+pip install -r requirements.txt
+
+# 2. 啟動伺服器（自動開啟瀏覽器）
+python server.py
+```
+
+瀏覽器自動開啟 `http://localhost:8000`，您的主控台就在這裡！
+
+## 🆕 v0.6 新功能
+- **真實 NTP 校時** — 使用 ntplib 連接香港天文台 time.hko.hk，精度 ±5ms
+- **Python 後端** — FastAPI + SQLite，資料不再受瀏覽器限制
+- **自動備份** — 每次啟動自動備份資料庫
+- **開罐即用** — 一條指令啟動完整系統
+
+---
+
 # VPre CountdownCtrl — 廣播排控倒數系統架構文件
 
 ## 📋 目錄
@@ -11,6 +36,7 @@
 8. [CSS 元件樹](#8-css-元件樹)
 9. [儲存與設定](#9-儲存與設定)
 10. [已知限制與注意事項](#10-已知限制與注意事項)
+11. [NTP 時間服務](#11-ntp-時間服務v06-新增)
 
 ---
 
@@ -30,15 +56,22 @@
 ## 2. 檔案結構
 
 ```
-RTHKVCC/
-├── VPre_CountdownCtrl_TEST.html      # ✅ 主系統 SPA（本文件描述對象）
-├── VPre_CountdownCtrl_PROD_v0.5.html # 正式版 HTML（與 TEST 同步）
-└── VPre_CountdownCtrl_ARCHITECTURE.md # 📄 本架構文件
+vcc-countdownctrl/
+├── server.py                        # 🚀 Python 後端伺服器 (FastAPI + SQLite + ntplib)
+├── requirements.txt                 # Python 依賴
+├── templates/
+│   └── index.html                   # 📄 主系統 SPA（JS/CSS/HTML 集中此檔）
+├── static/                          # 靜態資源目錄
+├── backups/                         # 自動備份目錄
+├── vcc_pre.db                       # SQLite 資料庫（執行後自動產生）
+├── README.md                        # 📄 本架構文件
+├── AGENTS.md                        # Agent 工作指引
+├── CHANGELOG.md                     # 版本歷史
+└── VPre_CountdownCtrl_PROD_v0.5.html # 純前端備份（v0.5 以前版本）
 ```
 
-> ⚠️ `VPre_CountdownCtrl_TEST.html` 與 `VPre_CountdownCtrl_PROD_v0.5.html` 為同系統的測試版與正式版，兩者內容保持同步。
-
----
+> ⚠️ `templates/index.html` 為目前主系統 SPA，由 `server.py` 提供服務。
+> 使用時無需直接開啟 HTML 檔案，執行 `python server.py` 即可。
 
 ## 3. 前端頁面架構
 
@@ -437,7 +470,21 @@ const MATRIX_COLORS = [
 
 ## 9. 儲存與設定
 
-### 9.1 localStorage 鍵值表
+### 9.1 後端資料庫 (SQLite)
+
+v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、設定皆持久化在 `vcc_pre.db` 中。
+
+| 資料表 | 用途 | 說明 |
+|--------|------|------|
+| `schedules` | 主排程資料庫 | 節目 CRUD、週期設定、Preset 關聯 |
+| `presets` | Cue Preset 庫 | Preset ID、名稱、節點 JSON |
+| `config` | 應用設定 | Key-Value 設定值 |
+| `ntp_logs` | NTP 同步日誌 | 每次 NTP 同步記錄 |
+
+資料透過 FastAPI REST API (`/api/schedule`、`/api/preset`、`/api/config`) 存取，
+前端使用非阻塞 fetch 呼叫，伺服器不可用時自動降級至 localStorage。
+
+### 9.2 localStorage 快取（離線降級）
 
 | Key | 內容 | 格式 |
 |-----|------|------|
@@ -445,8 +492,11 @@ const MATRIX_COLORS = [
 | `vcc_pre_presets_v8` | Cue Preset 庫 | JSON Object |
 | `vcc_pre_config_v8` | 應用設定 | JSON Object |
 | `vcc_pre_dismissed` | 已關閉的提示 | JSON Array |
+| `vcc_pre_ntp_*` (x4) | NTP 時間服務暫存 | 各別值 |
 
-### 9.2 設定頁面
+> 後端離線時，系統自動使用 localStorage 作為降級儲存，確保廣播作業不中斷。
+
+### 9.3 設定頁面
 
 在 `page-settings` 中可調整：
 
@@ -458,9 +508,10 @@ const MATRIX_COLORS = [
 | 提示音頻率 | Number | 測試音的頻率 |
 | 提示音長度 | Number | 測試音的持續時間 |
 | 行事曆記憶天數 | Number | 日曆可視範圍 |
+| NTP 伺服器 | Input | NTP 伺服器位址（預設 `time.hko.hk`） |
+| NTP 同步間隔 | Number | 自動同步間隔（秒，0=關閉） |
 | 引擎心跳間隔 | Input | 開發者選項：定時器間隔 (ms) |
 
----
 
 ## 10. 已知限制與注意事項
 
@@ -477,9 +528,10 @@ const MATRIX_COLORS = [
 
 ### 10.3 資料安全
 
-- 所有資料儲存在 `localStorage`（同一瀏覽器/網域下共用）
-- 無伺服器備份機制 — 建議定期使用匯出功能備份
-- 無權限控管 — 所有操作員皆可修改所有設定
+- **主要儲存**：所有資料持久化在 `vcc_pre.db`（SQLite），伺服器重啟不遺失
+- **自動備份**：伺服器每次啟動自動產生日期備份檔至 `backups/` 目錄
+- **離線降級**：前端 localStorage 作為備援，後端不可用時仍可讀寫
+- **無權限控管** — 所有操作員皆可修改所有設定
 
 ### 10.4 發展備註
 
@@ -496,59 +548,89 @@ const MATRIX_COLORS = [
 ## 11. NTP 時間服務（v0.6 新增）
 
 ### 11.1 概述
-VCC PRE v0.6 新增 HTTP-based 時間同步功能，取代原本的假 NTP 檢查。系統可從指定的 HTTP 時間伺服器取得標準時間，計算與本地時鐘的偏移量，並將偏移量套用至所有 Cue 觸發計算。
+VCC PRE v0.6 新增 **真實 NTP 校時** 功能，使用 Python `ntplib` 透過 UDP port 123 連接香港天文台 `time.hko.hk`，精度可達 ±5ms。
 
 ### 11.2 架構
-```
-NTPManager (全域 JS 物件)
-├── 狀態: connected | fallback | local | syncing | error
-├── offset: 伺服器時間 - Date.now() (毫秒)
-├── async sync(url): fetch → parse → 計算偏移
-│   ├── 成功 → 儲存偏移, 更新狀態
-│   └── 失敗 → 保留前次偏移, 降級至本地時鐘
-└── 自動同步 setInterval
 
-getCalibratedDate()
-  └── Date.now() + timeOffset → 時區轉換
+```
+┌─────────────────┐     HTTP API      ┌──────────────────────┐
+│   瀏覽器前端      │ ────────────────→ │  Python 後端 (FastAPI)│
+│  NTPManager.js   │ ←──────────────── │  NTPManager (ntplib) │
+│  (呼叫 /api/ntp/)│                   │  UDP 123             │
+└─────────────────┘                   └──────────┬───────────┘
+                                                 │
+                                                 ▼
+                                          ┌──────────────┐
+                                          │  time.hko.hk  │
+                                          │ (香港天文台)   │
+                                          └──────────────┘
 ```
 
-### 11.3 設定項目
+### 11.3 前端 NTPManager（瀏覽器端）
+
+```javascript
+const NTPManager = {
+    status: 'connected' | 'fallback' | 'local' | 'syncing' | 'error',
+    offset: 0,              // serverTime - Date.now() (ms)
+    lastSyncTime: null,     // ISO string
+    errorMsg: '',
+    config: {
+        ntpServerUrl: 'time.hko.hk',
+        ntpAutoSyncInterval: 600,   // seconds
+    },
+    timerId: null,          // auto-sync setInterval ID
+    async sync(url) { ... } // 呼叫後端 /api/ntp/sync
+};
+```
+
+- `sync()` 透過 `API.ntpSync()` 呼叫後端 `/api/ntp/sync`
+- 後端回傳 `{status, offset_ms, last_sync, error_msg}`
+- 後端無法連線時，自動保留上次成功偏移量並降級至 `local` 狀態
+
+### 11.4 後端 NTPManager（Python ntplib）
+
+```python
+class NTPManager:
+    def __init__(self):
+        self.status = 'local'
+        self.offset_ms = 0.0
+        self.server_url = 'time.hko.hk'
+
+    def sync(self) -> dict:
+        """使用 ntplib 透過 UDP 123 進行真實 NTP 同步"""
+        import ntplib
+        client = ntplib.NTPClient()
+        response = client.request(self.server_url, version=3, timeout=5)
+        self.offset_ms = response.offset * 1000  # 秒 → 毫秒
+        # ...
+```
+
+| 端點 | 方法 | 說明 |
+|------|------|------|
+| `/api/ntp/status` | GET | 回傳目前 NTP 狀態與偏移量 |
+| `/api/ntp/sync` | POST | 觸發即時 NTP 同步 |
+
+### 11.5 設定項目
 
 | 設定項 | ID | 類型 | 說明 |
 |-------|-----|------|------|
-| NTP 伺服器 URL | `cfgNtpUrl` | Input | HTTP 時間 API 位址 |
-| 自動同步間隔 | `cfgNtpInterval` | Number | 秒數（0=關閉） |
+| NTP 伺服器 | `cfgNtpUrl` | Input | NTP 伺服器位址（預設 `time.hko.hk`） |
+| 自動同步間隔 | `cfgNtpInterval` | Number | 秒數（0=關閉，預設 600） |
 | 狀態 | `settingsNtpStatus` | Display | 🟢 已同步 / ⚠️ 降級 / 🔴 錯誤 |
 | 立即同步 | `btnNtpSync` | Button | 手動觸發同步 |
 
-### 11.4 預設伺服器
-```javascript
-'https://worldtimeapi.org/api/timezone/Asia/Hong_Kong'
-```
-使用香港天文台時區（Asia/Hong_Kong），與系統預設時區一致。支援 CORS，可在瀏覽器中直接使用。
-
-### 11.5 支援的回應格式
-| 欄位 | 來源範例 | 說明 |
-|------|---------|------|
-| `datetime` | worldtimeapi | ISO 8601 完整時間字串 |
-| `utc_datetime` | 其他 API | UTC ISO 8601 |
-| `unixtime` | 多種 API | Unix 時間戳（秒） |
-
 ### 11.6 持久化
-- `vcc_pre_ntp_offset` — 上次成功偏移量 (ms)
-- `vcc_pre_ntp_last_sync` — 上次同步時間 (ISO)
-- `vcc_pre_ntp_server_url` — 設定的伺服器 URL
-- `vcc_pre_ntp_interval` — 自動同步間隔 (秒)
-
-所有 NTP 設定也保存在 `vcc_pre_config_v8` 的 `appConfig.ntp*` 字段中，可透過 Config JSON 面板匯出/匯入。
+- **後端**：每次 NTP 同步記錄寫入 `vcc_pre.db` 的 `ntp_logs` 資料表
+- **前端**：偏移量與最後同步時間暫存於 localStorage（`vcc_pre_ntp_*`），作為後端離線時的備援
+- **Config**：NTP 設定也保存在 `appConfig.ntp*` 字段中，可透過 Config JSON 面板匯出/匯入
 
 ### 11.7 已知限制
-- ⚠️ **瀏覽器無法使用原始 NTP (UDP 123)**，必須使用 HTTP 時間 API
-- ⚠️ **時間 API 需要支援 CORS**，否則會觸發跨域錯誤
-- ⚠️ **worldtimeapi.org 為第三方服務**，若該服務不可用，系統自動降級至本地時鐘
-- ⚠️ **偏移量精度受網路延遲影響**，一般情況下誤差在 50–200ms 內
+- ⚠️ **UDP port 123 必須開放** — NTP 同步使用 UDP 協定，若防火牆阻擋則無法同步
+- ⚠️ **`time.hko.hk` 為香港天文台 NTP 伺服器** — 若在非香港區域或該伺服器不可用，系統自動降級至本地時鐘
+- ⚠️ **偏移量精度受網路延遲影響** — 一般情況下 ntplib 可達 ±5ms 精度
+- ⚠️ **後端離線時** — 前端自動降級至 localStorage 的上次成功偏移量
 
 ### 11.8 發展備註
-- 2026-06-20: 新增 NTP 時間服務、NTPManager 物件、設定頁 NTP 面板、自動同步定時器
+- 2026-06-20: 新增 Python ntplib NTP 同步、FastAPI `/api/ntp/` 端點、前端 NTP 設定面板、自動同步定時器、啟動時自動同步
 
 *本架構文件由 AI 輔助生成，最後更新於 2026-06-20*

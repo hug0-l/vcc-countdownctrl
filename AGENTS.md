@@ -1,16 +1,28 @@
 # VPre CountdownCtrl — Agent 工作指南
 
 ## 📌 專案概述
-**VPre CountdownCtrl** 是一個廣播電視台排控中心的 **單頁應用 (SPA)**，所有程式碼集中於一個 HTML 檔案 (3375 行)。支援節目排程管理、Cue 提示點觸發、時間軸視覺化。
+**VPre CountdownCtrl** 是一個廣播電視台排控中心的 **Python 後端 + 前端 SPA** 混合架構。
+- 前端 SPA 集中於 `templates/index.html`（~3800 行）
+- 後端使用 **FastAPI + SQLite + ntplib**（`server.py`）
+- 支援節目排程管理、Cue 提示點觸發、時間軸視覺化。
 
 ## 🏗️ 檔案結構
 ```
 vcc-countdownctrl/
-├── VPre_CountdownCtrl_PROD_v0.5.html  # 主系統 SPA（所有 JS/CSS/HTML 集中此檔）
-├── README.md                          # 架構文件（開發前請先閱讀）
-├── AGENTS.md                          # 本文件（Agent 工作指引）
-└── CHANGELOG.md                       # 版本歷史
+├── server.py                        # 🚀 Python 後端 (FastAPI + SQLite + ntplib)
+├── requirements.txt                 # Python 依賴
+├── templates/
+│   └── index.html                   # 📄 主系統 SPA（所有 JS/CSS/HTML 集中此檔）
+├── static/                          # 靜態資源目錄
+├── backups/                         # 自動備份目錄
+├── vcc_pre.db                       # SQLite 資料庫（執行後自動產生）
+├── README.md                        # 架構文件（開發前請先閱讀）
+├── AGENTS.md                        # 本文件（Agent 工作指引）
+├── CHANGELOG.md                     # 版本歷史
+└── VPre_CountdownCtrl_PROD_v0.5.html # 純前端備份（v0.5 以前版本）
 ```
+
+> 啟動方式：`pip install -r requirements.txt && python server.py`
 
 ## 🧩 模組劃分（原始碼行號範圍）
 | 範圍 | 模組 | 說明 |
@@ -39,7 +51,17 @@ vcc-countdownctrl/
 | 3331–3375 | 開發者選項 + Crash Dump | `applyDevEngineInterval()`、`factoryResetStorage()` 等 |
 
 ## 🕒 NTP 時間服務架構
-### NTPManager（新增於卡片 T-1, T-2, T-3）
+
+### 整體流程
+```
+瀏覽器前端 NTPManager        Python 後端 NTPManager         香港天文台
+   ┌──────────┐  POST /api/ntp/sync  ┌──────────────┐  UDP 123  ┌──────────┐
+   │ sync()   │ ──────────────────→ │ ntplib sync │ ────────→ │time.hko  │
+   │          │ ←────────────────── │             │ ←──────── │ .hk      │
+   └──────────┘  {status,offset_ms}  └──────────────┘           └──────────┘
+```
+
+### 前端 NTPManager
 ```javascript
 const NTPManager = {
     status: 'connected' | 'fallback' | 'local' | 'syncing' | 'error',
@@ -47,61 +69,80 @@ const NTPManager = {
     lastSyncTime: null,     // ISO string
     errorMsg: '',
     config: {
-        ntpServerUrl: 'https://worldtimeapi.org/api/timezone/Asia/Hong_Kong',
-        ntpAutoSyncInterval: 0,   // seconds, 0=disabled
+        ntpServerUrl: 'time.hko.hk',
+        ntpAutoSyncInterval: 600,   // seconds
     },
-    timerId: null,          // auto-sync setInterval ID
-    async sync(url) { ... } // fetch → parse → compute offset
+    timerId: null,
+    async sync(url) { ... } // 呼叫 API.ntpSync() → 後端 /api/ntp/sync
 };
 ```
 
-### 關鍵函數
-| 函數 | 位置 | 說明 |
+### 後端 NTPManager（Python）
+```python
+# server.py — NTPManager class
+import ntplib
+client = ntplib.NTPClient()
+response = client.request('time.hko.hk', version=3, timeout=5)
+offset_ms = response.offset * 1000  # seconds → ms
+```
+
+| 端點 | 方法 | 說明 |
 |------|------|------|
-| `NTPManager.sync(url)` | ~1005 | 非阻塞同步，5 秒 timeout |
-| `updateNtpStatusUI()` | 新增 | 更新狀態列 syncBadge + ntpStatus |
-| `updateSettingsNtpUI()` | 新增 | 更新設定頁 NTP 面板 |
-| `restartAutoSync()` | 新增 | 重新初始化自動同步 timer |
-| `handleManualNtpSync()` | 新增 | 設定頁「立即同步」按鈕處理 |
+| `/api/ntp/status` | GET | 回傳目前 NTP 狀態與偏移量 |
+| `/api/ntp/sync` | POST | 觸發即時 NTP 同步（ntplib → time.hko.hk） |
+
+### 關鍵前端函數
+| 函數 | 說明 |
+|------|------|
+| `NTPManager.sync(url)` | 呼叫後端 `/api/ntp/sync`，前端非阻塞等待結果 |
+| `updateNtpStatusUI()` | 更新狀態列 syncBadge + ntpStatus |
+| `updateSettingsNtpUI()` | 更新設定頁 NTP 面板 |
+| `restartAutoSync()` | 重新初始化自動同步 timer |
+| `handleManualNtpSync()` | 設定頁「立即同步」按鈕處理 |
 
 ### 資料持久化
-- localStorage Key: `vcc_pre_ntp_offset`（偏移量 ms）、`vcc_pre_ntp_last_sync`（ISO 時間戳）
-- localStorage Key: `vcc_pre_ntp_server_url`（伺服器 URL）、`vcc_pre_ntp_interval`（自動間隔秒數）
-- 所有 NTP 設定也保存在 `appConfig.ntp*` 字段中，透過 Config JSON 面板可匯出/匯入
+- **後端 SQLite**：`ntp_logs` 資料表記錄每次 NTP 同步（時間戳、狀態、偏移量、錯誤訊息）
+- **前端 localStorage**：`vcc_pre_ntp_*` 暫存偏移量與最後同步時間（後端離線備援）
+- **Config JSON**：NTP 設定也保存在 `appConfig.ntp*` 字段中，可透過 Config JSON 面板匯出/匯入
 
 ## ⚠️ 關鍵注意事項（Gotchas）
 
-1. **單檔架構** — 所有程式碼在同一個 .html 檔案中。修改時注意模組邊界區塊，避免破壞其他模組。
-2. **NTP 僅支援 HTTP API** — 瀏覽器無法使用 UDP NTP（port 123）。必須使用支援 CORS 的 HTTP 時間 API。
-3. **timeOffset 全局變數** — `let timeOffset = 0` 在 ~1115 行。`getCalibratedDate()` 使用 `Date.now() + timeOffset` 做時間校正。
-4. **4 個 localStorage key 不可混淆**：
-   - `vcc_pre_master_db_v8` — 排程資料庫
-   - `vcc_pre_presets_v8` — Cue Preset 庫
-   - `vcc_pre_config_v8` — 應用設定
-   - `vcc_pre_ntp_*` (x4) — NTP 時間服務設定
-5. **Always PR / code review** — 單一巨大檔案容易產生衝突。提交前一定要 diff 檢查。
+1. **後端優先** — 啟動前先 `python server.py`，前端 SPA 由 FastAPI 提供服務。直接用瀏覽器開啟 `templates/index.html` 會缺少 API 支援。
+2. **NTP 使用 UDP port 123** — `ntplib` 透過 UDP 連接 `time.hko.hk`。若防火牆阻擋 UDP 123，NTP 會降級至本地時鐘。
+3. **timeOffset 全局變數** — `let timeOffset = 0`。`getCalibratedDate()` 使用 `Date.now() + timeOffset` 做時間校正。
+4. **SQLite 資料庫 (`vcc_pre.db`)** — 所有資料持久化在 SQLite。若資料庫損毀，可刪除後重啟伺服器（會重新建立空資料庫）。
+5. **重要 localStorage key**：
+   - `vcc_pre_master_db_v8` — 排程資料庫（離線備援）
+   - `vcc_pre_presets_v8` — Cue Preset 庫（離線備援）
+   - `vcc_pre_config_v8` — 應用設定（離線備援）
+   - `vcc_pre_ntp_*` (x4) — NTP 時間服務暫存
 6. **時碼格式** — 固定 `HH:MM:SS:FF`（Frame 為單位，預設 PAL 25fps）
 7. **引擎 40ms timer** — `timerInterval = setInterval(updateGlobalDashboard, 40)`，只在首頁全量更新，其它頁面輕量 CUE 檢查。
 8. **AudioContext 需要用戶手勢** — 首次播放需要用戶點擊解鎖，聲音模組已內建 `actx.resume()` 處理。
 
 ## 🔧 開發流程提示
 - **修改 config 時**：記得同時更新 `saveConfig()` 和 `loadConfig()` 以及預設值 `defaultConfig()`
-- **新增 UI 元素**：在 HTML 區塊 (345–973) 中依頁面 `page-*` id 添加，不要破壞現有結構
+- **新增 UI 元素**：在 `templates/index.html` 的 HTML 區塊中依頁面 `page-*` id 添加，不要破壞現有結構
 - **JS 函數添加**：依模組行號範圍放入對應區塊，頂部變數區放宣告，底部放實作
-- **測試方式**：直接用瀏覽器開啟該 .html 檔案即可（純前端，無需伺服器）
-- **Agent 切記**：這是一個生產級 SPA，3375 行。任何改動後都應該手動驗證所有核心功能！
+- **測試方式**：執行 `python server.py` 後開啟瀏覽器訪問 `http://localhost:8000`
+- **後端離線降級**：後端不可用時，前端自動使用 localStorage 資料，仍可瀏覽與編輯排程
+- **Agent 切記**：這是一個生產級系統，任何改動後都應該手動驗證所有核心功能！
 
 ## 🧪 快速驗證清單（每次修改後）
+- [ ] 伺服器啟動無錯誤：`python server.py`
+- [ ] 瀏覽器自動開啟 `http://localhost:8000`
 - [ ] 頁面載入無 console error
 - [ ] 時鐘正常運作（每秒刷新）
-- [ ] NTP 狀態正確顯示（已同步/本地時鐘）
-- [ ] 設定頁 NTP 面板可操作
+- [ ] NTP 自動同步，狀態顯示正確（已同步/本地時鐘）
+- [ ] 設定頁 NTP 面板可操作（伺服器 URL、間隔、立即同步）
 - [ ] 時間格式正確（HH:MM:SS:FF）
-- [ ] 排程 CRUD 正常
+- [ ] 排程 CRUD 正常（新增/編輯/刪除/複製）
+- [ ] 資料持久化：重新整理後資料仍在
+- [ ] 後端離線時 localStorage 降級正常
 - [ ] ENGINE 啟動/停止正常
 - [ ] Cue 觸發顯示正確（矩陣高亮、Popup、音效）
-- [ ] localStorage 讀寫正常
-- [ ] Config JSON 匯出/匯入正常
+- [ ] 備份下載 → JSON 格式正確
+- [ ] 備份還原 → 資料完整恢復
 
 ## 📝 版本控制
 - Branch: `main`（正式版）
