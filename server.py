@@ -2,13 +2,13 @@
 """
 VCC PRE CountdownCtrl — Backend Server
 FastAPI + SQLite + ntplib NTP syncing
-import sys
 Single-file server. python server.py to start.
 """
 
 import json
 import os
 import sqlite3
+import sys
 import threading
 import time
 import webbrowser
@@ -63,7 +63,7 @@ def _clean_old_logs():
         if f.name.startswith("vcc_pre_") and f.suffix == ".log" and f.stat().st_mtime < cutoff:
             try:
                 f.unlink()
-                print(f"🧹 Removed old log: {f.name}")
+                _append_log("INFO", f"🧹 Removed old log: {f.name}")
             except Exception:
                 pass
 
@@ -424,11 +424,11 @@ def _ntp_auto_sync_loop():
             status = result.get('status', 'unknown')
             offset = result.get('offset_ms', 0)
             if status == 'connected':
-                print(f"🕒 NTP auto-sync: {status} (offset={offset}ms)")
+                log_info(f"🕒 NTP auto-sync: {status} (offset={offset}ms)")
             else:
-                print(f"⚠️ NTP auto-sync: {status} — {result.get('error_msg', '')}")
+                log_warn(f"⚠️ NTP auto-sync: {status} — {result.get('error_msg', '')}")
         except Exception as e:
-            print(f"⚠️ NTP auto-sync error: {e}")
+            log_error(f"⚠️ NTP auto-sync error: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -453,27 +453,27 @@ def startup():
             }
             with open(backup_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            print(f"📦 Auto-backup saved: {backup_path}")
+            log_info(f"📦 Auto-backup saved: {backup_path}")
         except Exception as e:
-            print(f"⚠️ Auto-backup failed: {e}")
+            log_warn(f"⚠️ Auto-backup failed: {e}")
 
     # ===== NTP auto-sync on startup =====
-    print(f"🕒 NTP syncing to {ntp_manager.server_url}...")
+    log_info(f"🕒 NTP syncing to {ntp_manager.server_url}...")
     try:
         result = ntp_manager.sync()
         status = result.get('status', 'unknown')
         offset = result.get('offset_ms', 0)
         if status == 'connected':
-            print(f"✅ NTP synced: offset={offset}ms")
+            log_info(f"✅ NTP synced: offset={offset}ms")
         else:
-            print(f"⚠️ NTP initial sync: {status} — {result.get('error_msg', '')}")
+            log_warn(f"⚠️ NTP initial sync: {status} — {result.get('error_msg', '')}")
     except Exception as e:
-        print(f"⚠️ NTP initial sync error: {e}")
+        log_error(f"⚠️ NTP initial sync error: {e}")
 
     # ===== Start background periodic sync thread =====
     thread = threading.Thread(target=_ntp_auto_sync_loop, daemon=True)
     thread.start()
-    print(f"🔄 NTP auto-sync thread started (interval: {NTP_SYNC_INTERVAL}s)")
+    log_info(f"🔄 NTP auto-sync thread started (interval: {NTP_SYNC_INTERVAL}s)")
 
 
 INDEX_HTML = BASE_DIR / "templates" / "index.html"
