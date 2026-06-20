@@ -1065,12 +1065,17 @@
                         <button class="btn-ctrl btn-export-ui" onclick="clipperConnect()" style="padding:3px 10px; font-size:10px;">🔗 連線</button>
                     </div>
 
-                    <!-- 檔案傳輸區 (依 Clipper 規範) -->
+                    <!-- 檔案傳輸區 -->
                     <div style="margin-top:12px; padding-top:12px; border-top:1px solid #1f2937;">
                         <div style="font-size:12px; color:#64748b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
                             <span>📁 檔案傳輸</span>
                             <span style="flex:1;"></span>
                             <span id="clipperFileStatus" style="font-size:10px;">就緒</span>
+                        </div>
+                        <!-- 傳送對象選擇 (先選目標再傳檔) -->
+                        <div id="clipperTargetArea" style="display:none;">
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">📤 傳送對象（點擊選取）：</div>
+                            <div id="clipperPeerTargets" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;"></div>
                         </div>
                         <!-- 拖放區 -->
                         <div id="clipperFileDropZone"
@@ -1082,12 +1087,26 @@
                             📁 拖曳檔案至此處，或點擊選擇檔案
                         </div>
                         <input type="file" id="clipperFileInput" multiple hidden onchange="clipperHandleDrop(this.files)">
-                        <!-- 目標選擇 -->
-                        <div id="clipperFileTargets" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; display:none;"></div>
-                        <!-- 進度 -->
-                        <div id="clipperFileProgress" style="margin-top:6px;"></div>
-                        <div id="clipperFileRecvStatus" style="font-size:11px; color:#64748b; margin-top:4px;"></div>
+                        <!-- 檔案佇列 + 進度條 -->
+                        <div id="clipperFileQueue" style="margin-top:6px;"></div>
                     </div>
+                    <style>
+                        .clipper-progress-item { background:#1e293b; border-radius:6px; padding:8px 10px; margin-bottom:6px; font-size:12px; }
+                        .clipper-progress-header { display:flex; justify-content:space-between; color:#cbd5e1; margin-bottom:4px; }
+                        .clipper-progress-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+                        .clipper-progress-size { color:#64748b; font-size:11px; }
+                        .clipper-progress-bar { height:4px; background:#334155; border-radius:2px; overflow:hidden; margin:4px 0; }
+                        .clipper-progress-fill { height:100%; background:#38bdf8; border-radius:2px; transition:width 0.3s ease; }
+                        .clipper-progress-fill.done { background:#22c55e; }
+                        .clipper-progress-fill.error { background:#ef4444; }
+                        .clipper-progress-fill.receiving { background:#a855f7; }
+                        .clipper-progress-status { font-size:10px; color:#64748b; }
+                        .clipper-peer-btn { padding:4px 10px; font-size:11px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:4px; cursor:pointer; transition:all 0.15s; }
+                        .clipper-peer-btn:hover { border-color:#38bdf8; }
+                        .clipper-peer-btn.selected { background:#1e3a5f; border-color:#38bdf8; color:#38bdf8; }
+                        .clipper-peer-btn.all-btn { border-color:#64748b; }
+                        .clipper-peer-btn.all-btn.selected { background:#1e3a5f; border-color:#38bdf8; }
+                    </style>
                 </div>
 <script src="/static/clipper-sdk.js"></script>
 <script>
@@ -4124,43 +4143,54 @@
             appendClipperMsg('system', '❌ ' + (err.message || '未知錯誤'));
         });
 
-        // ---- 檔案傳輸事件監聽 ----
+        // ---- 檔案傳輸事件監聽 + 進度條更新 ----
         clipper.on('file-progress', function(p) {
-            var statusEl = document.getElementById('clipperFileStatus');
-            if (statusEl) statusEl.textContent = p.name + ': ' + p.progress + '%';
-            var progressEl = document.getElementById('clipperFileProgress');
-            if (progressEl) {
-                progressEl.innerHTML = '<div style="font-size:10px; color:#94a3b8;">📤 ' + p.name + ': ' + p.progress + '%</div>';
+            var el = document.getElementById('clipper-fp-' + p.fileId);
+            if (el) {
+                var fill = el.querySelector('.clipper-progress-fill');
+                var st = el.querySelector('.clipper-progress-status');
+                if (fill) fill.style.width = p.progress + '%';
+                if (st) st.textContent = '📤 傳送中 ' + p.progress + '%';
             }
         });
 
         clipper.on('file-sent', function(s) {
-            var displayName = s.peerId;
-            if (clipper._peers && clipper._peers.get) {
-                var peer = clipper._peers.get(s.peerId);
-                if (peer && peer.displayName) displayName = peer.displayName;
+            var el = document.getElementById('clipper-fp-' + s.fileId);
+            if (el) {
+                var fill = el.querySelector('.clipper-progress-fill');
+                var st = el.querySelector('.clipper-progress-status');
+                if (fill) { fill.style.width = '100%'; fill.className = 'clipper-progress-fill done'; }
+                if (st) st.textContent = '✅ 已完成';
             }
-            appendClipperMsg('system', '✅ 已傳送 ' + s.name + ' 給 ' + displayName);
-            var statusEl = document.getElementById('clipperFileStatus');
-            if (statusEl) statusEl.textContent = '就緒';
-            var progressEl = document.getElementById('clipperFileProgress');
-            if (progressEl) progressEl.innerHTML = '';
         });
 
         clipper.on('file-meta', function(meta) {
-            appendClipperMsg('system', '📥 正在接收檔案: ' + meta.name + ' (' + formatSize(meta.size) + ')');
-            var recvStatus = document.getElementById('clipperFileRecvStatus');
-            if (recvStatus) recvStatus.textContent = '📥 ' + meta.name + ' ...';
+            var queue = document.getElementById('clipperFileQueue');
+            var div = document.createElement('div');
+            div.id = 'clipper-fp-' + meta.fileId;
+            div.className = 'clipper-progress-item';
+            div.innerHTML = '<div class="clipper-progress-header"><span class="clipper-progress-name">📥 ' + escapeHtml(meta.name) + '</span><span class="clipper-progress-size">' + formatSize(meta.size) + '</span></div><div class="clipper-progress-bar"><div class="clipper-progress-fill receiving" style="width:0%"></div></div><div class="clipper-progress-status">📥 接收中... 0%</div>';
+            queue.appendChild(div);
         });
 
         clipper.on('file-chunk', function(chunk) {
-            var recvStatus = document.getElementById('clipperFileRecvStatus');
-            if (recvStatus) recvStatus.textContent = '📥 接收中... ' + chunk.progress + '%';
+            var el = document.getElementById('clipper-fp-' + chunk.fileId);
+            if (el) {
+                var fill = el.querySelector('.clipper-progress-fill');
+                var st = el.querySelector('.clipper-progress-status');
+                if (fill) fill.style.width = chunk.progress + '%';
+                if (st) st.textContent = '📥 接收中... ' + chunk.progress + '%';
+            }
         });
 
         clipper.on('file-done', function(done) {
-            var recvStatus = document.getElementById('clipperFileRecvStatus');
-            if (recvStatus) recvStatus.textContent = '';
+            var el = document.getElementById('clipper-fp-' + done.fileId);
+            if (el) {
+                var fill = el.querySelector('.clipper-progress-fill');
+                var st = el.querySelector('.clipper-progress-status');
+                if (fill) { fill.style.width = '100%'; fill.className = 'clipper-progress-fill done'; }
+                if (st) st.textContent = '✅ 接收完成';
+            }
             // 自動下載
             var a = document.createElement('a');
             a.href = URL.createObjectURL(done.blob);
@@ -4172,8 +4202,21 @@
         });
 
         clipper.on('file-error', function(err) {
-            appendClipperMsg('system', '❌ ' + (err.message || '檔案傳輸錯誤'));
+            var el = document.getElementById('clipper-fp-' + err.fileId);
+            if (el) {
+                var fill = el.querySelector('.clipper-progress-fill');
+                var st = el.querySelector('.clipper-progress-status');
+                if (fill) { fill.style.width = '100%'; fill.className = 'clipper-progress-fill error'; }
+                if (st) st.textContent = '❌ ' + (err.message || '錯誤');
+            } else {
+                appendClipperMsg('system', '❌ ' + (err.message || '檔案傳輸錯誤'));
+            }
         });
+
+        // peer-joined/left → 更新目標選擇 UI
+        clipper.on('peer-joined', function() { updatePeerTargetUI(); });
+        clipper.on('peer-left', function() { setTimeout(updatePeerTargetUI, 500); });
+        clipper.on('connected', function() { setTimeout(updatePeerTargetUI, 1000); });
 
         // 🔥 開始連線！
         clipper.connect();
@@ -4268,6 +4311,59 @@
     }
 
     // ===== Clipper 檔案傳輸 UI 處理 =====
+    // 類似 native clipper：先選對象，再拖放檔案自動傳送
+
+    var _clipperSelectedTargets = new Set();
+
+    function updatePeerTargetUI() {
+        var area = document.getElementById('clipperTargetArea');
+        var container = document.getElementById('clipperPeerTargets');
+        if (!clipper || !clipper.connected || !area || !container) return;
+        
+        var peers = [];
+        for (const [pid, info] of clipper._peers) {
+            if (pid !== clipper._peerId) peers.push({ peerId: pid, displayName: info.displayName || pid });
+        }
+        
+        if (peers.length === 0) {
+            area.style.display = 'none';
+            return;
+        }
+        area.style.display = '';
+        container.innerHTML = '';
+        
+        // "全部" 按鈕
+        var allSelected = peers.length > 0 && peers.every(function(p) { return _clipperSelectedTargets.has(p.peerId); });
+        var allBtn = document.createElement('button');
+        allBtn.textContent = '👥 全部';
+        allBtn.className = 'clipper-peer-btn all-btn' + (allSelected ? ' selected' : '');
+        allBtn.onclick = function() {
+            if (allSelected) { _clipperSelectedTargets.clear(); }
+            else { peers.forEach(function(p) { _clipperSelectedTargets.add(p.peerId); }); }
+            updatePeerTargetUI();
+        };
+        container.appendChild(allBtn);
+        
+        // 各 peer 按鈕
+        for (var i = 0; i < peers.length; i++) {
+            (function(peer) {
+                var sel = _clipperSelectedTargets.has(peer.peerId);
+                var btn = document.createElement('button');
+                btn.textContent = '🖥 ' + peer.displayName;
+                btn.className = 'clipper-peer-btn' + (sel ? ' selected' : '');
+                btn.title = peer.peerId;
+                btn.onclick = function() {
+                    if (_clipperSelectedTargets.has(peer.peerId)) {
+                        _clipperSelectedTargets.delete(peer.peerId);
+                    } else {
+                        _clipperSelectedTargets.add(peer.peerId);
+                    }
+                    updatePeerTargetUI();
+                };
+                container.appendChild(btn);
+            })(peers[i]);
+        }
+    }
 
     function clipperHandleDrop(files) {
         if (!clipper || !clipper.connected) {
@@ -4276,56 +4372,41 @@
         }
         if (!files || files.length === 0) return;
         
-        // 如果還沒有 peers，等待一下讓 peer-list 到達
-        if (clipper._peers.size === 0 && clipper._state && clipper._state.peers && clipper._state.peers.length > 1) {
-            // state.peers 包含了自己，過濾掉
-            const others = clipper._state.peers.filter(function(p) { return p.peerId !== clipper._peerId; });
-            if (others.length > 0) {
-                renderFileTargets(files, others);
-                return;
+        // 檢查是否有選取對象
+        var targets = [];
+        for (const [pid] of clipper._peers) {
+            if (pid !== clipper._peerId && _clipperSelectedTargets.has(pid)) {
+                targets.push(pid);
             }
         }
-        
-        renderFileTargets(files);
-    }
-
-    function renderFileTargets(files, peerArray) {
-        const container = document.getElementById('clipperFileTargets');
-        container.innerHTML = '';
-        container.style.display = '';
-        
-        // 從 _peers Map 或傳入的 peerArray 取得目標
-        var targets = peerArray || [];
+        // 若無選取對象但房間有其他人，提示用戶先選對象
+        if (targets.length === 0 && clipper._peers.size > 1) {
+            appendClipperMsg('system', '💡 請先在上方選取「傳送對象」再拖放檔案');
+            return;
+        }
         if (targets.length === 0) {
-            for (const [peerId, info] of clipper._peers) {
-                targets.push({ peerId: peerId, displayName: info.displayName || peerId });
-            }
+            appendClipperMsg('system', '⚠️ 尚無其他成員在房間內');
+            return;
         }
         
-        // Remove self from targets
-        targets = targets.filter(function(p) { return p.peerId !== clipper._peerId; });
-        
-        for (var i = 0; i < targets.length; i++) {
-            var peer = targets[i];
-            var btn = document.createElement('button');
-            btn.textContent = '📤 ' + (peer.displayName || peer.peerId);
-            btn.style.cssText = 'padding:4px 10px; font-size:11px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:4px; cursor:pointer;';
-            (function(targetPeerId) {
-                btn.onclick = function() {
-                    container.style.display = 'none';
-                    for (var j = 0; j < files.length; j++) {
-                        clipper.sendFile(targetPeerId, files[j]);
-                    }
-                };
-            })(peer.peerId);
-            container.appendChild(btn);
-        }
-        
-        if (targets.length === 0) {
-            var msg = document.createElement('div');
-            msg.style.cssText = 'color:#64748b; font-size:12px; padding:8px 0;';
-            msg.textContent = '⚠️ 尚無其他成員在房間內';
-            container.appendChild(msg);
+        // 傳送檔案到每個選取的目標
+        for (var i = 0; i < files.length; i++) {
+            (function(file) {
+                var fileId = clipper._uuid ? clipper._uuid() : 'f' + Date.now();
+                // 先在佇列中顯示
+                var queue = document.getElementById('clipperFileQueue');
+                if (queue) {
+                    var div = document.createElement('div');
+                    div.id = 'clipper-fp-' + fileId;
+                    div.className = 'clipper-progress-item';
+                    div.innerHTML = '<div class="clipper-progress-header"><span class="clipper-progress-name">📤 ' + escapeHtml(file.name) + '</span><span class="clipper-progress-size">' + formatSize(file.size) + '</span></div><div class="clipper-progress-bar"><div class="clipper-progress-fill" style="width:0%"></div></div><div class="clipper-progress-status">⏳ 等待中... (' + targets.length + ' 對象)</div>';
+                    queue.appendChild(div);
+                }
+                // 逐個目標傳送
+                for (var j = 0; j < targets.length; j++) {
+                    clipper.sendFile(targets[j], file);
+                }
+            })(files[i]);
         }
     }
 
