@@ -4215,9 +4215,10 @@
             }
         });
 
-        // peer-joined/left/name-updated → 更新目標選擇 UI
+        // peer-joined/left/updated/name-updated → 更新目標選擇 UI
         clipper.on('peer-joined', function() { updatePeerTargetUI(); });
         clipper.on('peer-left', function() { setTimeout(updatePeerTargetUI, 500); });
+        clipper.on('peer-updated', function() { updatePeerTargetUI(); });  // 名稱變更時即時更新
         clipper.on('connected', function() { setTimeout(updatePeerTargetUI, 1000); });
         clipper.on('name-updated', function() {
             // 自己的名稱已更新 — 靜默更新顯示
