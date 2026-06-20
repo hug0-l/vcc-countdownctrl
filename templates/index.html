@@ -1150,8 +1150,11 @@ setTimeout(function() {
         appConfig.ntpLastOffset = NTPManager.offset;
         appConfig.ntpLastSyncTime = NTPManager.lastSyncTime || '';
         localStorage.setItem('county_config_v8', JSON.stringify(appConfig));
-        // Also sync to server (non-blocking, fire-and-forget)
-        API.saveConfig(appConfig);
+        // Debounce server sync: localStorage writes immediately, API call waits 2s after last change
+        if (window._saveConfigTimer) clearTimeout(window._saveConfigTimer);
+        window._saveConfigTimer = setTimeout(function() {
+            API.saveConfig(appConfig);
+        }, 2000);
     }
 
     function loadConfig() {
