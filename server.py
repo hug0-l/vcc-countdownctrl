@@ -253,7 +253,7 @@ class NTPManager:
         try:
             import ntplib
             client = ntplib.NTPClient()
-            response = client.request(self.server_url, version=3, timeout=5)
+            response = client.request(self.server_url, version=4, timeout=5)
             self.offset_ms = response.offset * 1000  # seconds → ms
             self.last_sync_time = datetime.utcnow().isoformat()
             self.status = 'connected'
@@ -349,6 +349,41 @@ class PresetCreate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# NTP Auto-Sync (background thread)
+# ---------------------------------------------------------------------------
+
+NTP_SYNC_INTERVAL = 600  # default seconds between syncs
+
+
+def _ntp_auto_sync_loop():
+    """Background thread: periodically sync NTP and sleep."""
+    while True:
+        try:
+            # Read interval and server URL from config table (allows runtime changes)
+            config = db_get_all_config()
+            interval = int(config.get('ntpAutoSyncInterval', str(NTP_SYNC_INTERVAL)))
+            if interval <= 0:
+                interval = NTP_SYNC_INTERVAL  # fallback default
+            # Allow server_url to be updated from config at runtime
+            config_url = config.get('ntpServerUrl', '')
+            if config_url:
+                ntp_manager.server_url = config_url
+        except Exception:
+            interval = NTP_SYNC_INTERVAL
+        time.sleep(interval)
+        try:
+            result = ntp_manager.sync()
+            status = result.get('status', 'unknown')
+            offset = result.get('offset_ms', 0)
+            if status == 'connected':
+                print(f"🕒 NTP auto-sync: {status} (offset={offset}ms)")
+            else:
+                print(f"⚠️ NTP auto-sync: {status} — {result.get('error_msg', '')}")
+        except Exception as e:
+            print(f"⚠️ NTP auto-sync error: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
@@ -373,6 +408,24 @@ def startup():
             print(f"📦 Auto-backup saved: {backup_path}")
         except Exception as e:
             print(f"⚠️ Auto-backup failed: {e}")
+
+    # ===== NTP auto-sync on startup =====
+    print(f"🕒 NTP syncing to {ntp_manager.server_url}...")
+    try:
+        result = ntp_manager.sync()
+        status = result.get('status', 'unknown')
+        offset = result.get('offset_ms', 0)
+        if status == 'connected':
+            print(f"✅ NTP synced: offset={offset}ms")
+        else:
+            print(f"⚠️ NTP initial sync: {status} — {result.get('error_msg', '')}")
+    except Exception as e:
+        print(f"⚠️ NTP initial sync error: {e}")
+
+    # ===== Start background periodic sync thread =====
+    thread = threading.Thread(target=_ntp_auto_sync_loop, daemon=True)
+    thread.start()
+    print(f"🔄 NTP auto-sync thread started (interval: {NTP_SYNC_INTERVAL}s)")
 
 
 INDEX_HTML = BASE_DIR / "templates" / "index.html"
