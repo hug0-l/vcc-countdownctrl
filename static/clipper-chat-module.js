@@ -62,10 +62,17 @@ class ChatModule extends ClipperModule {
     showTemporaryMessage(text) {
         const container = document.getElementById(this._opts.messagesId);
         if (!container) return;
+        // 使用獨立 temp zone，確保不被 _renderChatRange 的 innerHTML='' 清走
+        let tempZone = container.querySelector('.temp-msg-zone');
+        if (!tempZone) {
+            tempZone = document.createElement('div');
+            tempZone.className = 'temp-msg-zone';
+            container.appendChild(tempZone);
+        }
         const div = document.createElement('div');
         div.style.cssText = 'align-self:center;text-align:center;font-size:11px;color:#475569;padding:2px 0;opacity:0.7;transition:opacity 0.5s;';
         div.textContent = text;
-        container.appendChild(div);
+        tempZone.appendChild(div);
         container.scrollTop = container.scrollHeight;
         // 10秒後淡出消失，不佔用 localStorage 空間
         setTimeout(() => {
@@ -74,8 +81,6 @@ class ChatModule extends ClipperModule {
             setTimeout(() => { if (div.parentNode) div.remove(); }, 550);
         }, 10000);
     }
-
-
 
     // ── Module lifecycle ──
 
@@ -378,7 +383,10 @@ class ChatModule extends ClipperModule {
         const showCount = Math.min(APP.state._chatVisibleCount, msgs.length);
         const startIdx = Math.max(0, msgs.length - showCount);
 
+        // Preserve .temp-msg-zone (join/leave notifications) across re-renders
+        const oldTempZone = container.querySelector('.temp-msg-zone');
         container.innerHTML = '';
+        if (oldTempZone) container.appendChild(oldTempZone);
 
         if (startIdx > 0) {
             const loadMore = document.createElement('div');
@@ -512,10 +520,15 @@ class ChatModule extends ClipperModule {
             const confirmed = await showConfirmDialog('確定要清除本機聊天紀錄嗎？此操作僅影響本機，不會影響其他客戶端。');
             if (!confirmed) return;
             APP.state.persistedChatMessages = [];
-            APP.state._chatVisibleCount = 15;
+            APP.state._chatVisibleCount = 0;
             saveToStorage('vcc_chat_messages', []);
             const cm = this._id(this._opts.messagesId);
-            if (cm) cm.innerHTML = '';
+            if (cm) {
+                // Preserve .temp-msg-zone, only clear message elements
+                const tempZone = cm.querySelector('.temp-msg-zone');
+                cm.innerHTML = '';
+                if (tempZone) cm.appendChild(tempZone);
+            }
             APP.showStatusMsg('本機聊天紀錄已清除');
         };
         this._id(this._opts.clearBtnId)?.addEventListener('click', this._clearHandler);

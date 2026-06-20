@@ -153,7 +153,10 @@ County.register('ClipperUI', function(C) {
         var showCount = Math.min(_clipperChatVisible, _clipperChatMessages.length);
         var startIdx = Math.max(0, _clipperChatMessages.length - showCount);
 
+        // Preserve .temp-msg-zone (join/leave notifications) across re-renders
+        var oldTempZone = container.querySelector('.temp-msg-zone');
         container.innerHTML = '';
+        if (oldTempZone) container.appendChild(oldTempZone);
 
         // 載入更多按鈕
         if (startIdx > 0) {
@@ -331,10 +334,17 @@ County.register('ClipperUI', function(C) {
     U._showTempJoinLeaveMsg = function(text) {
         var container = document.getElementById('clipperMessages');
         if (!container) return;
+        // 使用獨立 temp zone，確保不被 renderClipperChatRange 的 innerHTML='' 清走
+        var tempZone = container.querySelector('.temp-msg-zone');
+        if (!tempZone) {
+            tempZone = document.createElement('div');
+            tempZone.className = 'temp-msg-zone';
+            container.appendChild(tempZone);
+        }
         var div = document.createElement('div');
         div.style.cssText = 'text-align:center;color:#64748b;font-size:11px;padding:2px 0;opacity:0.7;transition:opacity 0.5s;';
         div.textContent = text;
-        container.appendChild(div);
+        tempZone.appendChild(div);
         container.scrollTop = container.scrollHeight;
         // 10秒後淡出消失
         setTimeout(function() {
