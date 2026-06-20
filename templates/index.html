@@ -97,6 +97,14 @@ setTimeout(function() {
 
             <div id="page-live" class="page active">
 
+                <!-- ⏱ Cue 倒數大看板 — 首頁最上方 -->
+                <div id="homeCueCountdown" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border:2px solid #818cf8; border-radius:10px; padding:20px; margin-bottom:20px; text-align:center; box-shadow:0 0 24px rgba(129,140,248,0.2);">
+                    <div style="font-size:11px; color:#a5b4fc; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">⏱ 下一個 Cue 倒數</div>
+                    <div id="cueCountdownLabel" style="font-size:14px; color:#c7d2fe; margin-bottom:4px;">—</div>
+                    <div id="cueCountdownTimer" style="font-family:'Courier New',monospace; font-size:48px; font-weight:bold; color:#e0e7ff; text-shadow:0 0 12px rgba(165,180,252,0.5);">--:--</div>
+                    <div id="cueCountdownMeta" style="font-size:12px; color:#a5b4fc; margin-top:6px;"></div>
+                </div>
+
                 <div class="mcr-operator-grid">
 
                     <div class="mcr-monitor-card no-active" id="mcrOnAirCard">
@@ -140,13 +148,6 @@ setTimeout(function() {
                         </div>
                     </div>
 
-                </div>
-
-                <div id="homeCueCountdown" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border:2px solid #818cf8; border-radius:10px; padding:20px; margin-bottom:20px; text-align:center; box-shadow:0 0 24px rgba(129,140,248,0.2);">
-                    <div style="font-size:11px; color:#a5b4fc; text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">⏱ 下一個 Cue 倒數</div>
-                    <div id="cueCountdownLabel" style="font-size:14px; color:#c7d2fe; margin-bottom:4px;">—</div>
-                    <div id="cueCountdownTimer" style="font-family:'Courier New',monospace; font-size:48px; font-weight:bold; color:#e0e7ff; text-shadow:0 0 12px rgba(165,180,252,0.5);">--:--</div>
-                    <div id="cueCountdownMeta" style="font-size:12px; color:#a5b4fc; margin-top:6px;"></div>
                 </div>
 
                 <div class="panel-box">
@@ -567,6 +568,28 @@ setTimeout(function() {
                         </div>
                         <div class="console-terminal" id="consoleTerminal"></div>
                     </div>
+
+                    <!-- 系統健康面板 -->
+                    <div class="panel-box">
+                        <div class="panel-header-box">
+                            <div class="panel-title">🩺 系統健康</div>
+                            <button class="btn-ctrl btn-export-ui" onclick="refreshHealthPanel()" style="padding:2px 8px;font-size:10px;">🔄 刷新</button>
+                        </div>
+                        <div id="healthPanelContent" style="font-size:12px;font-family:monospace;line-height:1.8;">
+                            <div style="color:#64748b;text-align:center;padding:10px 0;">點擊「刷新」查看模組狀態</div>
+                        </div>
+                    </div>
+
+                    <!-- 一鍵診斷面板 -->
+                    <div class="panel-box">
+                        <div class="panel-header-box">
+                            <div class="panel-title">🔍 一鍵系統診斷</div>
+                            <button class="btn-start" onclick="runSystemDiagnosis()" style="font-size:11px;padding:4px 12px;">▶ 執行</button>
+                        </div>
+                        <div id="diagnosisResult" style="font-size:12px;font-family:monospace;line-height:1.8;">
+                            <div style="color:#64748b;text-align:center;padding:10px 0;">點擊「執行」開始測試</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -893,6 +916,10 @@ setTimeout(function() {
                     } catch(err) { alert('檔案解析錯誤: ' + err.message); }
                 };
                 reader.readAsText(file);
+            }
+        });
+        input.value = '';
+    }
 
     function saveDataToFile(silent) {
         // Try API download first; fallback to localStorage export
@@ -1536,7 +1563,7 @@ setTimeout(function() {
             var badge = document.getElementById('clipperBadge');
             if (badge) badge.className = 'clipper-badge';
         }
-        if (pageId === 'settings') { refreshJsonInspectorProbe(); refreshConfigJsonArea(); fetchServerLog(); }
+        if (pageId === 'settings') { refreshJsonInspectorProbe(); refreshConfigJsonArea(); fetchServerLog(); refreshHealthPanel(); }
         if (pageId === 'changelog') {
             // Populate changelog from CHANGELOG.md
             fetch('/static/CHANGELOG.md').then(function(r){return r.text();}).then(function(t){
@@ -1906,9 +1933,36 @@ setTimeout(function() {
         // 載入儲存的設定（FPS、beep、上次日期等）
         loadConfig();
 
+        // 填入時區下拉選項
+        const tzEl = document.getElementById('cfgTimezone');
+        if (tzEl) {
+            const commonTZs = ['Asia/Taipei','Asia/Hong_Kong','Asia/Shanghai','Asia/Tokyo','Asia/Seoul','Asia/Singapore','Asia/Kuala_Lumpur','Asia/Bangkok','Asia/Kolkata','Asia/Dubai','Australia/Sydney','Pacific/Auckland','Europe/London','Europe/Berlin','Europe/Paris','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','UTC'];
+            const currentTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const selectedTz = (appConfig && appConfig.timezone) ? appConfig.timezone : currentTz;
+            commonTZs.forEach(function(tz) {
+                const opt = document.createElement('option');
+                opt.value = tz; opt.textContent = tz;
+                if (tz === selectedTz) opt.selected = true;
+                tzEl.appendChild(opt);
+            });
+            if (commonTZs.indexOf(selectedTz) < 0) {
+                const opt = document.createElement('option');
+                opt.value = selectedTz; opt.textContent = selectedTz + ' (當前系統)';
+                opt.selected = true;
+                tzEl.appendChild(opt);
+            }
+        }
+
+        const todayStr = getTodayStr();
+        document.getElementById('globalTargetDate').value = todayStr;
+        document.getElementById('progDate').value = todayStr;
+        document.getElementById('periodicEndDate').value = todayStr;
+        const savedClipperName = localStorage.getItem('vcc_clipper_name') || 'VPRE';
+        const clipperDisplayNameEl = document.getElementById('clipperDisplayName');
+        if (clipperDisplayNameEl) clipperDisplayNameEl.textContent = savedClipperName;
+
         // 先從 API 載入資料，失敗則從 localStorage 降級
         loadFromServer().then(function() {
-            // Data loaded, proceed with rendering
             refreshPresetDropdownUI();
             if (masterScheduleDB.length === 0) {
                 masterScheduleDB.push({
@@ -1934,36 +1988,6 @@ setTimeout(function() {
             onPresetSelectionChange();
             checkNtpStatus();
         });
-
-        // 填入時區下拉選項
-        const tzEl = document.getElementById('cfgTimezone');
-        if (tzEl) {
-            const commonTZs = ['Asia/Taipei','Asia/Hong_Kong','Asia/Shanghai','Asia/Tokyo','Asia/Seoul','Asia/Singapore','Asia/Kuala_Lumpur','Asia/Bangkok','Asia/Kolkata','Asia/Dubai','Australia/Sydney','Pacific/Auckland','Europe/London','Europe/Berlin','Europe/Paris','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','UTC'];
-            const currentTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const selectedTz = (appConfig && appConfig.timezone) ? appConfig.timezone : currentTz;
-            commonTZs.forEach(function(tz) {
-                const opt = document.createElement('option');
-                opt.value = tz; opt.textContent = tz;
-                if (tz === selectedTz) opt.selected = true;
-                tzEl.appendChild(opt);
-            });
-            // 如果當前時區不在列表中，也加入
-            if (commonTZs.indexOf(selectedTz) < 0) {
-                const opt = document.createElement('option');
-                opt.value = selectedTz; opt.textContent = selectedTz + ' (當前系統)';
-                opt.selected = true;
-                tzEl.appendChild(opt);
-            }
-        }
-
-        const todayStr = getTodayStr();
-        document.getElementById('globalTargetDate').value = todayStr;
-        document.getElementById('progDate').value = todayStr;
-        document.getElementById('periodicEndDate').value = todayStr;
-        const savedClipperName = localStorage.getItem('vcc_clipper_name') || 'VPRE';
-        const clipperDisplayNameEl = document.getElementById('clipperDisplayName');
-        if (clipperDisplayNameEl) clipperDisplayNameEl.textContent = savedClipperName;
-
 
         // NTP 時間同步（非阻塞，保留現有 offset）
         syncWithNetworkTime(function() {
@@ -2363,6 +2387,22 @@ setTimeout(function() {
                     { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
                     { offset: "e0", name: "■ 播放結束", freq: 500, soundId: "bell" }
                 ]
+            },
+            "pre_standard_news": {
+                name: "標準新聞節目",
+                nodes: [
+                    { offset: -300, name: "⏳ 開播前5分", freq: 600, soundId: "bell" },
+                    { offset: -180, name: "⏳ 開播前3分", freq: 800, soundId: "short_beep" },
+                    { offset: -60, name: "⏳ 開播前1分", freq: 900, soundId: "tone" },
+                    { offset: -30, name: "🔔 開播前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: -15, name: "🔔 開播前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: 0, name: "▶ 開播", freq: 2000, soundId: "alert" },
+                    { offset: "e-180", name: "⏳ 結束前3分", freq: 800, soundId: "short_beep" },
+                    { offset: "e-60", name: "⏳ 結束前1分", freq: 900, soundId: "tone" },
+                    { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: "e0", name: "■ 節目結束", freq: 500, soundId: "bell" }
+                ]
             }
         };
     }
@@ -2452,7 +2492,7 @@ setTimeout(function() {
 
     function deletePresetAction() {
         let id = document.getElementById('presetSelector').value;
-        if (!id || id === "pre_broadcast") return;
+        if (!id || id.startsWith("pre_") || id.startsWith("news_")) return;
         if (confirm("確定刪除此預設集？")) {
             delete cuePresets[id];
             localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
@@ -2761,6 +2801,62 @@ setTimeout(function() {
         } catch (e) {
             writeLog("CUE 檢查器錯誤: " + e.message, 'error');
         }
+    }
+
+    function refreshHealthPanel() {
+        var el = document.getElementById('healthPanelContent');
+        if (!el) return;
+        var report = County.getHealthReport();
+        var html = '';
+        var mods = report.modules || {};
+        var keys = Object.keys(mods);
+        if (keys.length === 0) {
+            html = '<div style="color:#64748b;">⚠️ 尚無模組載入記錄</div>';
+        } else {
+            keys.forEach(function(name) {
+                var m = mods[name];
+                if (m.status === 'loaded') {
+                    html += '<div>✅ <b>' + name + '</b> <span style="color:#64748b;">' + m.size + ' · ' + m.at + '</span></div>';
+                } else {
+                    html += '<div>❌ <b>' + name + '</b> <span style="color:#ef4444;">' + (m.error || '載入失敗') + '</span></div>';
+                }
+            });
+        }
+        html += '<div style="border-top:1px solid #1f2937;margin-top:8px;padding-top:8px;color:#64748b;font-size:11px;">';
+        html += '🌐 ' + (report.online ? '🟢 在線' : '🔴 離線');
+        html += ' · ⏱ ' + new Date(report.bootTime).toLocaleTimeString();
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
+    function runSystemDiagnosis() {
+        var el = document.getElementById('diagnosisResult');
+        if (!el) return;
+        el.innerHTML = '<div style="color:#f59e0b;">⏳ 診斷中...</div>';
+        var checks = [
+            { label: 'GET /api/health', fn: function() { return fetch('/api/health').then(function(r){ return r.ok; }); } },
+            { label: 'GET /api/config', fn: function() { return fetch('/api/config').then(function(r){ return r.ok; }); } },
+            { label: 'GET /api/schedule', fn: function() { return fetch('/api/schedule').then(function(r){ return r.ok; }); } },
+            { label: 'GET /api/preset', fn: function() { return fetch('/api/preset').then(function(r){ return r.ok; }); } },
+            { label: 'localStorage 寫入', fn: function() { try { localStorage.setItem('_diag','1'); localStorage.removeItem('_diag'); return Promise.resolve(true); } catch(e){ return Promise.resolve(false); } } }
+        ];
+        Promise.all(checks.map(function(check) {
+            var t0 = performance.now();
+            return check.fn().then(function(ok) {
+                var ms = (performance.now() - t0).toFixed(0);
+                return { label: check.label, ok: ok, ms: ms };
+            }).catch(function() {
+                return { label: check.label, ok: false, ms: 'ERR' };
+            });
+        })).then(function(results) {
+            var html = '';
+            results.forEach(function(r) {
+                var icon = r.ok ? '✅' : '❌';
+                var color = r.ok ? '#34d399' : '#ef4444';
+                html += '<div style="display:flex;justify-content:space-between;"><span>' + icon + ' ' + r.label + '</span><span style="color:' + color + ';">' + (r.ok ? r.ms + 'ms' : '失敗') + '</span></div>';
+            });
+            el.innerHTML = html;
+        });
     }
 
     function refreshClockOnly() {

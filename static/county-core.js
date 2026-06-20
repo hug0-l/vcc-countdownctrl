@@ -1,40 +1,42 @@
-// county-core.js — County 模組載入器 + 初始化整合
+// county-core.js — County 模組載入器 + 初始化整合 + 自診斷
 (function() {
     window.County = window.County || {};
     var C = window.County;
     C.modules = {};
+
+    // 啟動探針 — 全域暴露供 Bootstrap Canary 存取
+    window._countyBoot = window._countyBoot || { time: Date.now(), modules: {} };
+    var _countyBoot = window._countyBoot;
+
     C.register = function(name, factory) {
-        var t0 = Date.now();
+        var entry = { at: new Date().toLocaleTimeString() };
         try {
             C.modules[name] = factory(C);
-            if (window._countyBoot) {
-                _countyBoot.modules[name] = {
-                    status: 'loaded',
-                    time: Date.now() - t0 + 'ms',
-                    size: (factory.toString().length / 1024).toFixed(1) + 'KB',
-                    at: new Date().toLocaleTimeString()
-                };
-            }
+            entry.status = 'loaded';
+            entry.size = factory.toString().length + 'ch';
             console.log('[County] Module loaded:', name);
         } catch(e) {
-            if (window._countyBoot) {
-                _countyBoot.modules[name] = {
-                    status: 'failed',
-                    error: e.message,
-                    at: new Date().toLocaleTimeString()
-                };
-            }
             console.error('[County] Module FAILED (' + name + '):', e.message);
+            entry.status = 'failed';
+            entry.error = e.message;
         }
+        _countyBoot.modules[name] = entry;
     };
     C.get = function(name) {
         return C.modules[name] || null;
     };
+    C.getHealthReport = function() {
+        return {
+            modules: _countyBoot.modules || {},
+            bootTime: _countyBoot.time,
+            online: navigator.onLine,
+            url: window.location.href,
+            userAgent: navigator.userAgent
+        };
+    };
     // 延遲初始化：所有模組註冊完成後由 DOMContentLoaded 觸發
     C.init = function() {
-        if (window._countyBoot) {
-            _countyBoot.ok = true; // 清除啟動探針
-        }
+        _countyBoot.ok = true; // 清除啟動探針
         console.log('[County] ===== System Initialization =====');
         var names = Object.keys(C.modules);
         console.log('[County] Modules registered (' + names.length + '):', names.join(', '));
@@ -56,7 +58,7 @@
         C.init();
     });
 
-    // 全局錯誤邊界 — runtime error toast + 上傳後端
+    // ⛑️ 全局錯誤邊界 — runtime error toast + 上傳後端
     window.addEventListener('error', function(e) {
         var msg = e.message || '未知錯誤';
         var loc = e.filename || '';
@@ -72,14 +74,13 @@
         toast.style.display = 'block';
         clearTimeout(toast._timer);
         toast._timer = setTimeout(function(){ toast.style.display = 'none'; }, 8000);
-        if (typeof fetch !== 'undefined') {
-            try {
-                fetch('/api/log/client', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify([{ts: new Date().toISOString(), level:'error', msg: 'Runtime: ' + errStr}])
-                });
-            } catch(ex) {}
-        }
+        // 上傳到後端
+        try {
+            fetch('/api/log/client', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify([{ts: new Date().toISOString(), level:'error', msg: 'Runtime: ' + errStr}])
+            });
+        } catch(ex) {}
     });
 })();
