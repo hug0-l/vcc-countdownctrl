@@ -1066,34 +1066,67 @@
     function handleFileOpen(input) {
         const file = input.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let ds = JSON.parse(e.target.result);
-                if (!ds.version) { alert('無效的資料檔格式'); return; }
-                applyDataSet(ds);
-                updateFileStatus('📄 ' + file.name);
-                writeLog('✅ 已載入備份檔: ' + file.name, 'success');
-                renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
-                refreshPresetDropdownUI(); onPresetSelectionChange();
-                if (isTrackingActive) calculateGlobalTimelineMatrix(true);
-            } catch(err) { alert('檔案解析錯誤: ' + err.message); }
-        };
-        reader.readAsText(file);
+        // Try API restore first; fallback to localStorage import
+        API.restoreBackup(file).then(function(result) {
+            if (result && result.status === 'ok') {
+                updateFileStatus('☁️ 伺服器');
+                writeLog('✅ 雲端還原備份成功', 'success');
+                // Reload from API
+                API.loadSchedules().then(function(apiData) {
+                    if (apiData && apiData.length > 0) {
+                        masterScheduleDB = apiData.map(normalizeScheduleFromApi);
+                        localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+                    }
+                    renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
+                    refreshPresetDropdownUI(); onPresetSelectionChange();
+                    if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                });
+            } else {
+                // Fallback: original restore from file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        let ds = JSON.parse(e.target.result);
+                        if (!ds.version) { alert('無效的資料檔格式'); return; }
+                        applyDataSet(ds);
+                        updateFileStatus('📄 ' + file.name);
+                        writeLog('✅ 已載入備份檔: ' + file.name, 'success');
+                        renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
+                        refreshPresetDropdownUI(); onPresetSelectionChange();
+                        if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                    } catch(err) { alert('檔案解析錯誤: ' + err.message); }
+                };
+                reader.readAsText(file);
+            }
+        });
         input.value = '';
     }
 
     function saveDataToFile(silent) {
-        let ds = getDataSet();
-        const json = JSON.stringify(ds, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = 'VCC_PRE_Backup_' + new Date().toISOString().split('T')[0] + '.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-        if (!silent) writeLog('💾 備份已下載: ' + a.download, 'success');
+        // Try API download first; fallback to localStorage export
+        API.downloadBackup().then(function(blob) {
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = 'VCC_PRE_Backup_' + new Date().toISOString().split('T')[0] + '.json';
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+                if (!silent) writeLog('💾 雲端備份已下載', 'success');
+            } else {
+                // Fallback to localStorage export
+                let ds = getDataSet();
+                const json = JSON.stringify(ds, null, 2);
+                const blob2 = new Blob([json], { type: 'application/json' });
+                const url2 = URL.createObjectURL(blob2);
+                let a2 = document.createElement('a');
+                a2.href = url2;
+                a2.download = 'VCC_PRE_Backup_' + new Date().toISOString().split('T')[0] + '.json';
+                document.body.appendChild(a2); a2.click(); a2.remove();
+                URL.revokeObjectURL(url2);
+                if (!silent) writeLog('💾 本地備份已下載', 'success');
+            }
+        });
     }
 
     function newDataFile() {
@@ -1181,6 +1214,85 @@
         }
     };
 
+    // ===== API Client — Backend-first, localStorage fallback =====
+    const API = {
+        baseUrl: '',
+
+        async _fetch(path, options = {}) {
+            try {
+                const res = await fetch(this.baseUrl + path, {
+                    ...options,
+                    headers: { 'Content-Type': 'application/json', ...options.headers },
+                    signal: AbortSignal.timeout(3000)
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return await res.json();
+            } catch(e) {
+                return null;
+            }
+        },
+
+        async loadSchedules() { return this._fetch('/api/schedule'); },
+        async saveSchedule(data) { return this._fetch('/api/schedule', { method: 'POST', body: JSON.stringify(data) }); },
+        async updateSchedule(id, data) { return this._fetch('/api/schedule/' + id, { method: 'PUT', body: JSON.stringify(data) }); },
+        async deleteSchedule(id) { return this._fetch('/api/schedule/' + id, { method: 'DELETE' }); },
+
+        async loadPresets() { return this._fetch('/api/preset'); },
+        async savePreset(data) { return this._fetch('/api/preset', { method: 'POST', body: JSON.stringify(data) }); },
+        async updatePreset(id, data) { return this._fetch('/api/preset/' + id, { method: 'PUT', body: JSON.stringify(data) }); },
+        async deletePreset(id) { return this._fetch('/api/preset/' + id, { method: 'DELETE' }); },
+
+        async loadConfig() { return this._fetch('/api/config'); },
+        async saveConfig(data) { return this._fetch('/api/config', { method: 'PUT', body: JSON.stringify(data) }); },
+
+        async ntpStatus() { return this._fetch('/api/ntp/status'); },
+        async ntpSync() { return this._fetch('/api/ntp/sync', { method: 'POST' }); },
+
+        async downloadBackup() {
+            try {
+                const res = await fetch('/api/backup/download');
+                if (!res.ok) return null;
+                return await res.blob();
+            } catch(e) { return null; }
+        },
+        async restoreBackup(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch('/api/backup/restore', { method: 'POST', body: formData });
+                return res.ok ? await res.json() : null;
+            } catch(e) { return null; }
+        },
+
+        async importLegacy(data) {
+            return this._fetch('/api/import-legacy', { method: 'POST', body: JSON.stringify(data) });
+        }
+    };
+
+    function normalizeScheduleFromApi(s) {
+        return {
+            id: s.id,
+            name: s.name,
+            broadcastDate: s.broadcast_date || s.broadcastDate,
+            startTime: s.start_time || s.startTime,
+            duration: s.duration,
+            periodicType: s.periodic_type || s.periodicType || 'none',
+            periodicEndDate: s.periodic_end_date || s.periodicEndDate || '',
+            periodicDays: s.periodic_days || s.periodicDays || [],
+            presetId: s.preset_id || s.presetId || 'std_news',
+            tags: s.tags || [],
+            colorLabel: s.color_label || s.colorLabel || ''
+        };
+    }
+
+    function normalizePresetFromApi(p) {
+        return {
+            id: p.id,
+            name: p.name,
+            nodes: p.nodes || []
+        };
+    }
+
     // GUI 行事曆目前的月/年檢視狀態
     let calCurrentYear = new Date().getFullYear(); let calCurrentMonth = new Date().getMonth(); // 從今日初始化
 
@@ -1221,6 +1333,8 @@
         appConfig.ntpLastSyncTime = NTPManager.lastSyncTime || '';
         localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
         markDirty();
+        // Also sync to server (non-blocking, fire-and-forget)
+        API.saveConfig(appConfig);
     }
 
     function loadConfig() {
@@ -1341,6 +1455,8 @@
             // 套用到 UI 與全域變數
             appConfig = newCfg;
             localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+            // Also sync to server (non-blocking, fire-and-forget)
+            API.saveConfig(appConfig);
             frameRate = appConfig.frameRate;
             document.getElementById('cfgFrameRate').value = frameRate;
             document.getElementById('cfgBeepFreq').value = appConfig.beepFreq || 1500;
@@ -2162,6 +2278,8 @@
         const targetId = selId ? selId : "preset_" + Date.now();
         cuePresets[targetId] = { name: name, nodes: parsedNodes };
         localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+        // Also sync to server (non-blocking, fire-and-forget)
+        API.savePreset({ id: targetId, name: name, nodes: parsedNodes });
         refreshPresetDropdownUI();
         document.getElementById('presetSelector').value = targetId;
         refreshPresetJsonArea();
@@ -2244,10 +2362,38 @@
         return totalFramesToTimecode(sf + df); // HH:MM:SS:FF 完整格式
     }
 
+    function syncAllToServer() {
+        // Fire-and-forget: POST each schedule and preset to server (non-blocking)
+        masterScheduleDB.forEach(function(prog) {
+            API.saveSchedule(formatForServer(prog));
+        });
+        for (let pid in cuePresets) {
+            API.savePreset({ id: pid, name: cuePresets[pid].name, nodes: cuePresets[pid].nodes });
+        }
+    }
+
+    function formatForServer(prog) {
+        return {
+            id: prog.id,
+            name: prog.name,
+            broadcastDate: prog.broadcastDate,
+            startTime: prog.startTime,
+            duration: prog.duration,
+            periodicType: prog.periodicType || 'none',
+            periodicEndDate: prog.periodicEndDate || '',
+            periodicDays: prog.periodicDays || [],
+            presetId: prog.presetId || 'std_news',
+            tags: prog.tags || [],
+            colorLabel: prog.colorLabel || ''
+        };
+    }
+
     function saveToLocalStorage() {
         localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
         refreshJsonInspectorProbe();
         markDirty();
+        // Also sync to server (non-blocking, fire-and-forget)
+        syncAllToServer();
     }
 
     function refreshPresetDropdownUI() {
@@ -2373,6 +2519,50 @@
         // 嘗試同步
         NTPManager.sync(NTPManager.config.ntpServerUrl).finally(function() {
             if (callback) callback();
+            // ===== Non-blocking API fetch for fresher data =====
+            fetchApiData();
+        });
+    }
+
+    function fetchApiData() {
+        API.loadSchedules().then(function(apiData) {
+            if (apiData && apiData.length > 0) {
+                masterScheduleDB = apiData.map(normalizeScheduleFromApi);
+                localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+                onGlobalDateChange();
+                renderRundownUI();
+                if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                updateFileStatus('☁️ 伺服器');
+            }
+        });
+        API.loadPresets().then(function(apiData) {
+            if (apiData && apiData.length > 0) {
+                cuePresets = {};
+                apiData.forEach(function(p) { cuePresets[p.id] = normalizePresetFromApi(p); });
+                localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+                refreshPresetDropdownUI();
+                onPresetSelectionChange();
+            }
+        });
+        API.loadConfig().then(function(apiData) {
+            if (apiData && apiData.frameRate) {
+                appConfig = apiData;
+                appConfig.frameRate = parseInt(appConfig.frameRate) || 25;
+                appConfig.beepFreq = parseFloat(appConfig.beepFreq) || 1500;
+                appConfig.beepDur = parseFloat(appConfig.beepDur) || 0.5;
+                appConfig.retentionSeconds = parseInt(appConfig.retentionSeconds) || 5;
+                localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+                frameRate = appConfig.frameRate;
+                document.getElementById('cfgFrameRate').value = frameRate;
+                document.getElementById('cfgBeepFreq').value = appConfig.beepFreq;
+                document.getElementById('cfgBeepDur').value = appConfig.beepDur;
+                const tzEl = document.getElementById('cfgTimezone');
+                if (tzEl && appConfig.timezone) tzEl.value = appConfig.timezone;
+                document.getElementById('cfgRetentionSec').value = appConfig.retentionSeconds;
+                timelineRange.maxFrames = 86400 * frameRate;
+                const fpsLabel = document.getElementById('sidebarFpsLabel');
+                if (fpsLabel) fpsLabel.innerText = frameRate + ' fps';
+            }
         });
     }
 
@@ -2676,6 +2866,8 @@
     function deleteProgram(id) {
         if (currentEditingId === id) exitEditMode();
         masterScheduleDB = masterScheduleDB.filter(function(p) { return p.id !== id; });
+        // Also delete from server (non-blocking, fire-and-forget)
+        API.deleteSchedule(id);
         saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
         if (isTrackingActive) calculateGlobalTimelineMatrix(true);
     }
@@ -2683,6 +2875,8 @@
     function clearAllPrograms() {
         if (confirm("確定全清 VCC PRE 編排庫？所有常規設定將消失。")) {
             if (currentEditingId !== null) exitEditMode();
+            // Delete all from server (non-blocking, fire-and-forget)
+            masterScheduleDB.forEach(function(p) { API.deleteSchedule(p.id); });
             masterScheduleDB = []; saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
             if (isTrackingActive) calculateGlobalTimelineMatrix(true);
         }
