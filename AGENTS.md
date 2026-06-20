@@ -143,6 +143,11 @@ offset_ms = response.offset * 1000  # seconds → ms
 - [ ] Cue 觸發顯示正確（矩陣高亮、Popup、音效）
 - [ ] 備份下載 → JSON 格式正確
 - [ ] 備份還原 → 資料完整恢復
+- [ ] Clipper IM 分頁載入正常，預設顯示名稱 VPRE
+- [ ] Clipper 分頁連線成功（🟢 已連線）
+- [ ] Clipper 聊天收發正常
+- [ ] Clipper 檔案傳輸（先選對象 → 拖放 → 進度條 → 自動下載）
+- [ ] Clipper 檔案接收進度條正常更新
 
 ## 📝 版本控制
 - Branch: `main`（正式版）

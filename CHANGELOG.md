@@ -1,5 +1,18 @@
 # VPre CountdownCtrl — 更新日誌
 
+## v0.7 (2026-06-20)
+- **💬 Clipper IM 即時通訊分頁** — 側邊欄加入「💬 Clipper IM」分頁，WebSocket 即時聊天
+- **📦 ClipperSDK 整合** — 改用 `clipper-sdk.js` 對接完整 Clipper 協議，不再自製 WS 協議
+- **📁 檔案傳輸 UI** — 先選對象再拖放，上傳/下載雙向進度條，自動下載接收檔案
+- **🌐 WebRTC P2P 支援** — SDK 層支援 P2P DataChannel 直連，降級 WS Relay
+- **🔒 離線唯讀保護** — 斷線自動鎖定所有協作功能，重連自動解除
+- **🔗 Clipper API 文件化** — protocol.md (1936行)完整記錄 Clipper WS 協議
+- **🌐 REST API 橋接** — Clipper 伺服器支援 REST CRUD 端點
+- **🔒 用戶隱私改善** — 所有 UI 隱藏 peerId，只顯示 displayName
+- **預設名 VPRE** — Clipper 顯示名稱預設為 VPRE
+- **跨頁 CUE 通知** — Clipper 聊天訊息跨分頁未讀計數 + Toast 通知
+- **響應式 Clipper UI** — Clipper 分頁在手機/小視窗自適應排版
+
 ## v0.6 (2026-06-20)
 - **重大架構升級** — 從純前端 SPA 升級為 Python 後端架構 (FastAPI + SQLite + ntplib)
 - **真實 NTP 校時** — 伺服器端 ntplib 連接香港天文台 stdtime.gov.hk，精度 ±5ms
