@@ -1070,184 +1070,25 @@
                         <div style="font-size:12px; color:#64748b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
                             <span>📁 檔案傳輸</span>
                             <span style="flex:1;"></span>
-                            <span id="clipperFileStatus" style="font-size:10px;">0 / 0 個檔案完成</span>
+                            <span id="clipperFileStatus" style="font-size:10px;">就緒</span>
                         </div>
-                         <div style="margin-top:10px; padding:16px; background:#090d16; border:1px solid #1f2937; border-radius:6px; text-align:center; font-size:13px; color:#4b5563;">
-                            📁 檔案傳輸 — 尚待支援
+                        <!-- 拖放區 -->
+                        <div id="clipperFileDropZone"
+                             style="border:2px dashed #334155; border-radius:8px; padding:20px; text-align:center; cursor:pointer; color:#94a3b8; font-size:13px;"
+                             ondragover="event.preventDefault();this.style.borderColor='#38bdf8';this.style.background='rgba(56,189,248,0.05)';"
+                             ondragleave="this.style.borderColor='#334155';this.style.background='';"
+                             ondrop="event.preventDefault();this.style.borderColor='#334155';this.style.background='';clipperHandleDrop(event.dataTransfer.files);"
+                             onclick="document.getElementById('clipperFileInput').click()">
+                            📁 拖曳檔案至此處，或點擊選擇檔案
                         </div>
+                        <input type="file" id="clipperFileInput" multiple hidden onchange="clipperHandleDrop(this.files)">
+                        <!-- 目標選擇 -->
+                        <div id="clipperFileTargets" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; display:none;"></div>
+                        <!-- 進度 -->
+                        <div id="clipperFileProgress" style="margin-top:6px;"></div>
                         <div id="clipperFileRecvStatus" style="font-size:11px; color:#64748b; margin-top:4px;"></div>
                     </div>
                 </div>
-            </div>
-
-            <div id="page-changelog" class="page">
-                <div class="help-section">
-                    <h2>📜 VCC PRE 更新日誌</h2>
-                    <p>目前版本：<b>v0.5</b> — 追蹤所有功能變更。</p>
-                </div>
-
-                <div class="help-section">
-                    <h3>v0.5 (2026-06-18)</h3>
-                    <ul>
-                        <li>程式碼重構：加入完整原始碼文件標頭與模組說明</li>
-                        <li>新增「操作說明」頁面 — 為廣播操作員編寫的完整指南</li>
-                        <li>動態節目表新增「結束時碼」欄位</li>
-                        <li>新增 📋 複製節⽬功能</li>
-                        <li>按鈕加入文字標籤（編輯、複製、刪除）</li>
-                        <li>ON AIR 警示改為紅色閃爍</li>
-                        <li>矩陣分組顯示：節目名稱 + 時段 [HH:MM:SS:FF – HH:MM:SS:FF]</li>
-                        <li>矩陣範圍縮小為前後各 3 項 + 自動置中對準「即將進行」</li>
-                        <li>矩陣高度改為自適應視窗</li>
-                        <li>跨頁面 CUE 引擎：全頁面運作，非首頁仍觸發 Popup 與聲音</li>
-                        <li>引擎可隨時停止（Toggle 模式）</li>
-                        <li>頁面內 CUE Popup 提示（取代瀏覽器通知）</li>
-                        <li>提示音完整尊重 Preset 設定（含重複次數與波形）</li>
-                        <li>新增統一 Config 管理系統，設定值持久化</li>
-                        <li>保留原則設定（CUE 保留秒數）</li>
-                        <li>時區設定</li>
-                        <li>Timeline 改為 Duration 色塊 + Cue 刻度</li>
-                        <li>節目 Tag 與 Color Label 系統</li>
-                        <li>矩陣欄位拆分（節目名稱 / Tags / Cue Event）</li>
-                        <li>表單預設值改為「現在」</li>
-                        <li>行事曆改為週日起始 + 顯示節目數量</li>
-                        <li>Preset 偏移改為 MM:SS 格式</li>
-                        <li>拖曳排序 + 表頭排序</li>
-                        <li>支援外部 JSON 匯出/匯入備份</li>
-                    </ul>
-                </div>
-
-                <div class="help-section">
-                    <h3>v0.4 (2026-06-17)</h3>
-                    <ul>
-                        <li>新增 Preset 節點表格化 UI（偏移方式/秒數/名稱/提示音）</li>
-                        <li>提示音 Preset 系統（9 種含長短響、重複次數）</li>
-                        <li>Timeline GUI 時間軸</li>
-                        <li>節目 Color Code 8 色循環</li>
-                        <li>矩陣三級視覺標示（🔴 最接近 / 🟡 次接近 / ⚪ 其餘）</li>
-                        <li>NTP 時間校準改為本地時鐘 + 連線檢查</li>
-                    </ul>
-                </div>
-
-                <div class="help-section">
-                    <h3>v0.3 — 初始公開版本</h3>
-                    <ul>
-                        <li>基本排程 CRUD（新增/編輯/刪除）</li>
-                        <li>行事曆與本週縱覽</li>
-                        <li>Preset 語法管理器（CSV 格式）</li>
-                        <li>ENGINE 即時監控（矩陣 + Timeline）</li>
-                        <li>音訊振盪器測試</li>
-                        <li>系統設定與探針</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div id="page-help" class="page">
-                <div class="help-section">
-                    <h2>📖 VCC PRE 操作說明 — 給廣播操作員</h2>
-                    <p>VCC PRE 是一套 <b>網頁版廣播排控系統</b>，讓您在同一畫面管理節目排程、設定 Cue 提示音、監控播出時序。所有資料自動儲存在您瀏覽器的 localStorage 中，重整或關閉頁面都不會遺失。</p>
-                    <div class="tip">💡 建議首次使用時，點擊頂部列「⬇ 匯出備份」下載一次備份檔。之後所有修改都會自動儲存，無需手動操作。</div>
-                </div>
-
-                <div class="help-grid">
-                    <div class="help-card">
-                        <h4>📡 首頁 ─ 即時監控中心</h4>
-                        <p>點擊「🚨 啟動主控監測」按鈕即開啟 ENGINE：</p>
-                        <ul>
-                            <li><b>🚨 當前 Cue Point</b> — 紅底面板顯示正在觸發中的提示點與節目名</li>
-                            <li><b>➔ 下一個 Cue Point</b> — 黃底面板顯示即將到來的 Cue 與倒數秒數</li>
-                            <li><b>Timeline 時間軸</b> — 每個節目一條軌道，<span style="color:rgba(255,255,255,0.55);background:var(--prog-color,#374151);padding:1px 6px;border-radius:3px;">半透明色塊</span> = 節目播出區間，<span style="color:#fff;">│</span> 白色刻度 = Cue 點，<span style="color:#ef4444;">▼ NOW</span> 紅線隨時間移動</li>
-                            <li><b>矩陣表</b> — 以前近點為中心前後各 5 項，<span style="color:#ef4444;">🔴</span> 最接近 <span style="color:#f59e0b;">🟡</span> 次接近 <span style="color:#64748b;">⚪</span> 其餘。右側欄位顯示 Tags 與節目名稱</li>
-                            <li><b>點擊 ENGINE 按鈕可隨時停止</b> — 再次點擊重新啟動</li>
-                        </ul>
-                    </div>
-                    <div class="help-card">
-                        <h4>📅 排程 ─ 節目管理</h4>
-                        <ul>
-                            <li><b>行事曆</b> — 點日期切換觀測日。藍底 = 選取日，綠框 = 今天，紫底線 = 當日有排程，數字下方顯示節目數量</li>
-                            <li><b>輸入表單</b> — 填寫名稱、日期、開播時碼、長度、週期模式、Tags、顏色標籤後儲存</li>
-                            <li><b>🏷️ Tags 標籤</b> — 輸入文字按 Enter 或點「＋新增」，可過濾分類節目</li>
-                            <li><b>🎨 顏色標籤</b> — 點選色圈為節目指定專屬色（覆蓋自動編配）</li>
-                            <li><b>📆 本週縱覽</b> — 一週節目一覽，點擊節目方塊直接編輯</li>
-                            <li><b>動態節目表</b> — 點整行任一點進入編輯模式，排序點擊表頭</li>
-                        </ul>
-                    </div>
-                    <div class="help-card">
-                        <h4>📋 Preset ─ 提示點設計</h4>
-                        <p>每個節目可套用一組 Preset，內含多個 Cue 節點：</p>
-                        <ul>
-                            <li><b>偏移方式</b> — 開始前／開始後／結束前／結束時，搭配 <b>MM:SS</b> 時間輸入</li>
-                            <li><b>提示音選取</b> — 從 9 種音色中選擇（短促、雙短、三短、長響、雙長響、急促 Alert、Chime、Bell、Tone）</li>
-                            <li><kbd>🔊</kbd> 預聽按鈕 — 完整播放所選音色（含重複次數與間隔）</li>
-                            <li>拖拽 <span style="color:#4b5563;">⋮⋮</span> 排序節點；點表頭排序各欄</li>
-                            <li>底部 JSON 區 — 可直接編輯或匯入/匯出 Preset 定義</li>
-                        </ul>
-                        <div class="tip">💡 開播/結束 cue 建議用高頻 (2000Hz)，提醒 cue 用中頻 (1000Hz)，背景 cue 用低頻 (400-800Hz)</div>
-                    </div>
-                    <div class="help-card">
-                        <h4>🛠️ 設定 ─ 系統調校</h4>
-                        <ul>
-                            <li><b>🔊 音訊振盪器</b> — 預設頻率與音長，變更自動儲存</li>
-                            <li><b>FPS 格數</b> — PAL 25 / NTSC 29.97 / 電影 24fps。變更後 ENGINE 自動重算</li>
-                            <li><b>🌐 時區</b> — 設定運作時區（影響所有日期與 Cue 觸發時間）</li>
-                            <li><b>🗑️ 保留原則</b> — 已觸發 Cue 在矩陣中保留的秒數（5 秒預設）</li>
-                            <li><b>⬇ 匯出備份／⬆ 匯入備份</b> — 單一 JSON 檔包含所有設定、排程、Preset，可跨機器轉移</li>
-                            <li><b>⚙️ Config 面板</b> — 檢視/編輯原始設定 JSON</li>
-                        </ul>
-                    </div>
-                    <div class="help-card">
-                        <h4>🎵 提示音一覽</h4>
-                        <table style="width:100%;font-size:12px;border-collapse:collapse;">
-                            <tr><th style="text-align:left;color:#9ca3af;padding:4px 2px;">音色</th><th style="text-align:left;color:#9ca3af;padding:4px 2px;">頻率</th><th style="text-align:left;color:#9ca3af;padding:4px 2px;">響法</th><th style="text-align:left;color:#9ca3af;padding:4px 2px;">適合</th></tr>
-                            <tr><td>短促 Beep</td><td>800Hz</td><td>● 1 次</td><td>簡短提示</td></tr>
-                            <tr><td>雙短 Beep (2x)</td><td>1000Hz</td><td>●● 2 次</td><td>中等警示</td></tr>
-                            <tr><td>三短 Beep (3x)</td><td>1200Hz</td><td>●●● 3 次</td><td>緊急預告</td></tr>
-                            <tr><td>長響 Beep</td><td>1500Hz</td><td>▬ 1 次</td><td>重要轉折</td></tr>
-                            <tr><td>雙長響 (2x)</td><td>1500Hz</td><td>▬▬ 2 次</td><td>極重要 cue</td></tr>
-                            <tr><td>急促 Alert (3x)</td><td>2000Hz</td><td>▄▄▄ square 波</td><td>緊急 cue</td></tr>
-                            <tr><td>柔和 Chime</td><td>1500Hz</td><td>● 1 次</td><td>溫和提示</td></tr>
-                            <tr><td>低沈 Bell</td><td>400Hz</td><td>● 1 次</td><td>背景/結束</td></tr>
-                            <tr><td>標準 Tone</td><td>1000Hz</td><td>● 1 次</td><td>一般用途</td></tr>
-                        </table>
-                        <div class="tip" style="margin-top:6px;">💡 Preset 頁面每行都有 <kbd>🔊</kbd> 預聽，引擎 CUE 觸發時會播放完整設定（含重複次數與波形類型）</div>
-                    </div>
-                    <div class="help-card">
-                        <h4>⚡ 快捷操作</h4>
-                        <ul>
-                            <li><kbd>⏱ 一分鐘後</kbd> — 快速填入「現在 + 60 秒」的開播時碼</li>
-                            <li><b>點行編輯</b> — 動態節目表或本週縱覽點項目直接編輯，不必按 ✏️</li>
-                            <li><b>Enter 新增標籤</b> — 在標籤輸入框按 Enter 快速加入</li>
-                            <li><b>拖曳 Preset 節點</b> — 抓 <span style="color:#4b5563;">⋮⋮</span> 排序</li>
-                            <li><b>表頭排序</b> — 點任一欄位表頭排序，再點切換升降序</li>
-                            <li><b>ENGINE 切換</b> — 啟動後按鈕變為「點擊停止」，可隨時關閉 ENGINE</li>
-                            <li><b>🚨 CUE Popup</b> — CUE 觸發時頁面頂部彈出醒目紅條提示音</li>
-                            <li><b>匯出/匯入</b> — 使用頂部列備份所有資料</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="help-section">
-                    <h3>⏱️ 時間與格數</h3>
-                    <p>時碼格式：<b>HH:MM:SS:FF</b>（FF = frame 格數）。預設 PAL 25fps（每幀 40ms），可在設定頁改為 29.97（NTSC）或 24（電影）。變更後需重新啟動 ENGINE 才會套用到 Cue 計算。</p>
-                    <p>系統使用<b>電腦本地時鐘</b>配合指定時區運作。時區設定確保換日與 Cue 觸發時間正確。NTP 連線狀態僅供參考。</p>
-                </div>
-
-                <div class="help-section">
-                    <h3>⚠️ 注意事項</h3>
-                    <ul>
-                        <li>資料儲存在瀏覽器 <b>localStorage</b>，清除瀏覽資料前請先匯出備份</li>
-                        <li>啟用 ENGINE 後切換分頁會自動暫停 timer，返回時恢復</li>
-                        <li>「工廠重置」會清空所有資料（排程、Preset、設定），請先備份</li>
-                        <li>如需跨機器同步，使用頂部「⬇ 匯出備份」下載 .json，再到另一台匯入</li>
-                        <li>NTP 校時依賴 <code>worldtimeapi.org</code>，無法連線不影響本地功能</li>
-
-                    </ul>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <script src="/static/clipper-sdk.js"></script>
 <script>
     // ============================================================================
     // VCC PRE — 廣播排控自動化系統 v0.5
@@ -4280,10 +4121,63 @@
         
         clipper.on('error', function(err) {
             appendClipperMsg('system', '❌ ' + (err.message || '未知錯誤'));
+        });        clipper.on('error', function(err) {
+            appendClipperMsg('system', '❌ ' + (err.message || '未知錯誤'));
         });
-        
-        clipper.connect();
+
+        // ---- 檔案傳輸事件監聽 ----
+        clipper.on('file-progress', function(p) {
+            var statusEl = document.getElementById('clipperFileStatus');
+            if (statusEl) statusEl.textContent = p.name + ': ' + p.progress + '%';
+            var progressEl = document.getElementById('clipperFileProgress');
+            if (progressEl) {
+                progressEl.innerHTML = '<div style="font-size:10px; color:#94a3b8;">📤 ' + p.name + ': ' + p.progress + '%</div>';
+            }
+        });
+
+        clipper.on('file-sent', function(s) {
+            var displayName = s.peerId;
+            if (clipper._peers && clipper._peers.get) {
+                var peer = clipper._peers.get(s.peerId);
+                if (peer && peer.displayName) displayName = peer.displayName;
+            }
+            appendClipperMsg('system', '✅ 已傳送 ' + s.name + ' 給 ' + displayName);
+            var statusEl = document.getElementById('clipperFileStatus');
+            if (statusEl) statusEl.textContent = '就緒';
+            var progressEl = document.getElementById('clipperFileProgress');
+            if (progressEl) progressEl.innerHTML = '';
+        });
+
+        clipper.on('file-meta', function(meta) {
+            appendClipperMsg('system', '📥 正在接收檔案: ' + meta.name + ' (' + formatSize(meta.size) + ')');
+            var recvStatus = document.getElementById('clipperFileRecvStatus');
+            if (recvStatus) recvStatus.textContent = '📥 ' + meta.name + ' ...';
+        });
+
+        clipper.on('file-chunk', function(chunk) {
+            var recvStatus = document.getElementById('clipperFileRecvStatus');
+            if (recvStatus) recvStatus.textContent = '📥 接收中... ' + chunk.progress + '%';
+        });
+
+        clipper.on('file-done', function(done) {
+            var recvStatus = document.getElementById('clipperFileRecvStatus');
+            if (recvStatus) recvStatus.textContent = '';
+            // 自動下載
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(done.blob);
+            a.download = done.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            appendClipperMsg('system', '✅ ' + done.name + ' 下載完成 (' + formatSize(done.size) + ')');
+        });
+
+        clipper.on('file-error', function(err) {
+            appendClipperMsg('system', '❌ ' + (err.message || '檔案傳輸錯誤'));
+        });
     }
+
+    function clipperSendMsg() {    }
 
     function clipperSendMsg() {
         const input = document.getElementById('clipperInput');
@@ -4371,6 +4265,49 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // ===== Clipper 檔案傳輸 UI 處理 =====
+
+    function clipperHandleDrop(files) {
+        if (!clipper || !clipper.connected) {
+            appendClipperMsg('system', '❌ 請先連線再傳送檔案');
+            return;
+        }
+        if (!files || files.length === 0) return;
+        renderFileTargets(files);
+    }
+
+    function renderFileTargets(files) {
+        const container = document.getElementById('clipperFileTargets');
+        container.innerHTML = '';
+        container.style.display = '';
+        for (const [peerId, info] of clipper._peers) {
+            const btn = document.createElement('button');
+            btn.textContent = '📤 ' + (info.displayName || peerId);
+            btn.style.cssText = 'padding:4px 10px; font-size:11px; background:#1e293b; border:1px solid #334155; color:#e2e8f0; border-radius:4px; cursor:pointer;';
+            btn.onclick = function() {
+                container.style.display = 'none';
+                for (const file of files) {
+                    clipper.sendFile(peerId, file);
+                }
+            };
+            container.appendChild(btn);
+        }
+        // If no peers, show a message
+        if (clipper._peers.size === 0) {
+            const msg = document.createElement('div');
+            msg.style.cssText = 'color:#64748b; font-size:12px; padding:8px 0;';
+            msg.textContent = '⚠️ 尚無其他成員在房間內';
+            container.appendChild(msg);
+        }
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+        return (bytes / 1073741824).toFixed(2) + ' GB';
     }
 
     // Edit display name on click
