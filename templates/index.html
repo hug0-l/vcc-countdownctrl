@@ -907,7 +907,7 @@ setTimeout(function() {
                     }
                     renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
                     refreshPresetDropdownUI(); onPresetSelectionChange();
-                    if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                    scheduleMatrixRecalc();
                 });
             } else {
                 // Fallback: original restore from file
@@ -921,7 +921,7 @@ setTimeout(function() {
                         writeLog('✅ 已載入備份檔: ' + file.name, 'success');
                         renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
                         refreshPresetDropdownUI(); onPresetSelectionChange();
-                        if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                        scheduleMatrixRecalc();
                     } catch(err) { alert('檔案解析錯誤: ' + err.message); }
                 };
                 reader.readAsText(file);
@@ -967,6 +967,7 @@ setTimeout(function() {
     let globalTriggers = [];         // 展開的 Cue 點陣列 [{ progName, cueName, targetFrames, ... }]
     let currentEditingId = null;     // 正在編輯的排程 ID
     let triggerHistory = [];          // CUE 觸發記錄（上限 200 筆）
+    var _matrixRecalcTimer = null;     // 矩陣重算 debounce 計時器
 
     const progDurations = {};          // Timeline 節目色塊 { progName → { startFrames, endFrames } }
     let frameRate = 25;              // 每秒格數（PAL=25, NTSC=29.97, Film=24）
@@ -1348,8 +1349,8 @@ setTimeout(function() {
         writeLog("⚙️ 時鐘格數已變更為 " + frameRate + " fps", 'warn');
         const fpsLabel = document.getElementById('sidebarFpsLabel');
         if (fpsLabel) fpsLabel.innerText = frameRate + ' fps';
+        scheduleMatrixRecalc();
         if (isTrackingActive) {
-            calculateGlobalTimelineMatrix(true);
             writeLog("⚠️ ENGINE 已使用新格數 " + frameRate + "fps 重新計算", 'info');
         }
     }
@@ -1954,9 +1955,7 @@ setTimeout(function() {
         renderWeekGlance();
         calculateMCRTrafficSummary();
         renderRundownUI();
-        if (isTrackingActive) {
-            calculateGlobalTimelineMatrix(true);
-        }
+        scheduleMatrixRecalc();
     }
 
     async function loadFromServer() {
@@ -2463,7 +2462,7 @@ setTimeout(function() {
         document.getElementById('presetSelector').value = targetId;
         refreshPresetJsonArea();
         markDirty();
-        if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+        scheduleMatrixRecalc();
     }
 
     function initNewPresetForm() {
@@ -2662,7 +2661,7 @@ setTimeout(function() {
             }
             renderRundownUI(); calculateMCRTrafficSummary();
             markDirty();
-            if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+            scheduleMatrixRecalc();
         }
     }
 
@@ -2737,7 +2736,7 @@ setTimeout(function() {
             document.getElementById('presetSelector').value = targetId;
             onPresetSelectionChange();
             markDirty();
-            if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+            scheduleMatrixRecalc();
             writeLog("✅ Preset JSON 已套用: " + data.name, 'success');
         } catch(err) { alert("JSON 語法錯誤: " + err.message); }
     }
@@ -2798,7 +2797,7 @@ setTimeout(function() {
                 localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
                 onGlobalDateChange();
                 renderRundownUI();
-                if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+                scheduleMatrixRecalc();
                 updateFileStatus('☁️ 伺服器');
             }
             // Retry any pending deletes (they might succeed now that server is back)
@@ -3070,7 +3069,7 @@ setTimeout(function() {
             saveToLocalStorage();
             calculateMCRTrafficSummary();
             renderRundownUI();
-            if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+            scheduleMatrixRecalc();
             writeLog('已快速修改節目 [' + target.name + '] 的開始時間與長度，CUE 已重新計算', 'warn');
         }
         cancelQuickEdit();
@@ -3198,7 +3197,7 @@ setTimeout(function() {
         renderGUICalendar();
         calculateMCRTrafficSummary();
         renderRundownUI();
-        if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+        scheduleMatrixRecalc();
     }
 
     function enterEditMode(id) {
@@ -3303,7 +3302,7 @@ setTimeout(function() {
         masterScheduleDB = masterScheduleDB.filter(function(p) { return p.id !== id; });
         _cacheToLocalStorage();
         renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
-        if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+        scheduleMatrixRecalc();
     }
 
     function clearAllPrograms() {
@@ -3315,7 +3314,7 @@ setTimeout(function() {
                 });
             });
             masterScheduleDB = []; saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
-            if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+            scheduleMatrixRecalc();
         }
     }
 
@@ -3516,6 +3515,15 @@ setTimeout(function() {
         // _masterTimer already running — just toggles via isTrackingActive flag
     }
 
+    // ===== Debounced matrix recalculation (binds rapid calls into one) =====
+    function scheduleMatrixRecalc() {
+        if (!isTrackingActive) return;
+        if (_matrixRecalcTimer) clearTimeout(_matrixRecalcTimer);
+        _matrixRecalcTimer = setTimeout(function() {
+            calculateGlobalTimelineMatrix(true);
+            _matrixRecalcTimer = null;
+        }, 100);
+    }
     function calculateGlobalTimelineMatrix(isHotReload) {
         const targetDateStr = document.getElementById('globalTargetDate').value;
         const activeList = getExpandedRundownForDate(targetDateStr);
