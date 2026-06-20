@@ -1328,7 +1328,9 @@
             periodicDays: s.periodic_days || s.periodicDays || [],
             presetId: s.preset_id || s.presetId || 'std_news',
             tags: s.tags || [],
-            colorLabel: s.color_label || s.colorLabel || ''
+            colorLabel: s.color_label || s.colorLabel || '',
+            _serverUpdatedAt: s.updated_at || '',   // server-side timestamp
+            _updatedAt: 0                             // local edit timestamp (0 = not locally modified)
         };
     }
 
@@ -2538,7 +2540,8 @@
             periodicDays: prog.periodicDays || [],
             presetId: prog.presetId || 'std_news',
             tags: prog.tags || [],
-            colorLabel: prog.colorLabel || ''
+            colorLabel: prog.colorLabel || '',
+            updatedAt: prog._updatedAt ? new Date(prog._updatedAt).toISOString() : ''
         };
     }
 
@@ -2688,16 +2691,40 @@
         });
     }
 
+    const _pendingDeletes = new Set();
+
     function fetchApiData() {
         API.loadSchedules().then(function(apiData) {
             if (apiData && apiData.length > 0) {
-                masterScheduleDB = apiData.map(normalizeScheduleFromApi);
+                // Merge: keep locally-modified items, preserve offline-only items
+                const apiMap = {};
+                apiData.forEach(function(s) {
+                    const normalized = normalizeScheduleFromApi(s);
+                    apiMap[normalized.id] = normalized;
+                });
+
+                // Compare local vs API: keep whichever has newer timestamp
+                masterScheduleDB.forEach(function(local) {
+                    const apiVersion = apiMap[local.id];
+                    if (!apiVersion) {
+                        // Local-only (offline created) — keep it
+                        apiMap[local.id] = local;
+                    } else if (local._updatedAt && local._updatedAt > new Date(apiVersion._serverUpdatedAt || 0).getTime()) {
+                        // Local was edited after server data — keep local
+                        apiMap[local.id] = local;
+                    }
+                    // else: API is newer or equal — use API version (already in apiMap)
+                });
+
+                masterScheduleDB = Object.values(apiMap);
                 localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
                 onGlobalDateChange();
                 renderRundownUI();
                 if (isTrackingActive) calculateGlobalTimelineMatrix(true);
                 updateFileStatus('☁️ 伺服器');
             }
+            // Retry any pending deletes (they might succeed now that server is back)
+            flushPendingDeletes();
         });
         API.loadPresets().then(function(apiData) {
             if (apiData && apiData.length > 0) {
@@ -2727,6 +2754,16 @@
                 const fpsLabel = document.getElementById('sidebarFpsLabel');
                 if (fpsLabel) fpsLabel.innerText = frameRate + ' fps';
             }
+        });
+    }
+
+    function flushPendingDeletes() {
+        if (_pendingDeletes.size === 0) return;
+        _pendingDeletes.forEach(function(id) {
+            API.deleteSchedule(id).then(function() {
+                _pendingDeletes.delete(id);
+                writeLog('✅ 離線刪除已同步至伺服器', 'success');
+            }).catch(function() {});
         });
     }
 
@@ -2975,7 +3012,8 @@
                     masterScheduleDB.push({
                         id: "P_" + Date.now(), name: name, broadcastDate: bDate, startTime: startStr,
                         duration: durStr, periodicType: 'none', periodicEndDate: '',
-                        presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: []
+                        presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: [],
+                        _updatedAt: Date.now()
                     });
                     writeLog("🔀 已建立單次覆蓋節目（原始週期未變更）。");
                 } else {
@@ -2983,6 +3021,7 @@
                     target.duration = durStr; target.periodicType = pType; target.periodicEndDate = (pType === 'none' ? '' : pEndDate);
                     target.presetId = pid; target.tags = tags; target.colorLabel = colorLabel;
                     target.periodicDays = periodicDays;
+                    target._updatedAt = Date.now();
                     writeLog("已更新排程資源條目。");
                 }
             }
@@ -2991,7 +3030,8 @@
             masterScheduleDB.push({
                 id: "P_" + Date.now(), name: name, broadcastDate: bDate, startTime: startStr,
                 duration: durStr, periodicType: pType, periodicEndDate: (pType === 'none' ? '' : pEndDate),
-                presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: periodicDays
+                presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: periodicDays,
+                _updatedAt: Date.now()
             });
             writeLog("新增跨期編排節目 [" + name + "] 成功。");
         }
@@ -3100,17 +3140,23 @@
     function deleteProgram(id) {
         if (currentEditingId === id) exitEditMode();
         masterScheduleDB = masterScheduleDB.filter(function(p) { return p.id !== id; });
-        // Also delete from server (non-blocking, fire-and-forget)
-        API.deleteSchedule(id);
         saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
         if (isTrackingActive) calculateGlobalTimelineMatrix(true);
+        // Also delete from server; queue for retry if offline
+        API.deleteSchedule(id).catch(function() {
+            _pendingDeletes.add(id);
+            writeLog('⏳ 刪除已佇列，恢復連線後自動同步', 'warn');
+        });
     }
 
     function clearAllPrograms() {
         if (confirm("確定全清 VCC PRE 編排庫？所有常規設定將消失。")) {
             if (currentEditingId !== null) exitEditMode();
-            // Delete all from server (non-blocking, fire-and-forget)
-            masterScheduleDB.forEach(function(p) { API.deleteSchedule(p.id); });
+            masterScheduleDB.forEach(function(p) {
+                API.deleteSchedule(p.id).catch(function() {
+                    _pendingDeletes.add(p.id);
+                });
+            });
             masterScheduleDB = []; saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
             if (isTrackingActive) calculateGlobalTimelineMatrix(true);
         }

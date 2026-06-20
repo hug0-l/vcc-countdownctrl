@@ -98,7 +98,8 @@ def init_db():
             periodic_days TEXT DEFAULT '[]',
             preset_id TEXT DEFAULT 'std_news',
             tags TEXT DEFAULT '[]',
-            color_label TEXT DEFAULT ''
+            color_label TEXT DEFAULT '',
+            updated_at TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS presets (
@@ -122,6 +123,12 @@ def init_db():
         );
     """)
     conn.commit()
+    # Migration: add updated_at column for existing databases
+    try:
+        conn.execute("ALTER TABLE schedules ADD COLUMN updated_at TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
     conn.close()
 
 
@@ -162,17 +169,18 @@ def db_get_schedule(id: str) -> dict | None:
 
 def db_upsert_schedule(data: dict) -> dict:
     conn = get_db()
+    now = datetime.utcnow().isoformat()
     tags_json = json.dumps(data.get('tags', []), ensure_ascii=False)
     days_json = json.dumps(data.get('periodicDays', []))
     conn.execute('''INSERT OR REPLACE INTO schedules 
         (id, name, broadcast_date, start_time, duration, periodic_type, 
-         periodic_end_date, periodic_days, preset_id, tags, color_label)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+         periodic_end_date, periodic_days, preset_id, tags, color_label, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
         (data['id'], data['name'], data.get('broadcastDate', ''),
          data.get('startTime', ''), data.get('duration', ''),
          data.get('periodicType', 'none'), data.get('periodicEndDate', ''),
          days_json, data.get('presetId', 'std_news'),
-         tags_json, data.get('colorLabel', '')))
+         tags_json, data.get('colorLabel', ''), now))
     conn.commit()
     conn.close()
     return db_get_schedule(data['id'])
@@ -388,6 +396,7 @@ class ScheduleCreate(BaseModel):
     presetId: str = 'std_news'
     tags: list = []
     colorLabel: str = ''
+    updatedAt: str = ''
 
 
 class PresetCreate(BaseModel):
@@ -609,6 +618,17 @@ async def update_schedule(schedule_id: str, data: ScheduleCreate):
     existing = db_get_schedule(schedule_id)
     if existing is None:
         return JSONResponse(status_code=404, content={"error": "not found"})
+
+    # Optimistic locking: check if schedule was modified by another user
+    if data.updatedAt:
+        stored = existing.get('updated_at', '')
+        if stored and data.updatedAt < stored:
+            return JSONResponse(status_code=409, content={
+                "error": "conflict",
+                "message": "此排程已被其他用戶修改，請重新載入頁面",
+                "server_updated_at": stored
+            })
+
     doc = data.model_dump()
     doc['id'] = schedule_id
     return db_upsert_schedule(doc)
