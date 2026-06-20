@@ -4413,13 +4413,14 @@
         if (!text || !clipperConnected || !clipperWs) return;
         
         const displayName = document.getElementById('clipperDisplayName').textContent.trim();
+        var now = Date.now();  // numeric timestamp (Clipper server expects number)
         
         // Send via WebSocket relay (reliable, works without WebRTC)
         const msg = {
             type: 'chat',
             text: text,
             from: displayName,
-            timestamp: new Date().toISOString()
+            timestamp: now
         };
         
         try {
@@ -4430,7 +4431,7 @@
                 room: document.getElementById('clipperRoomCode').value.trim(),
                 text: text,
                 from: displayName,
-                timestamp: msg.timestamp
+                timestamp: now
             }));
         } catch(e) {
             appendClipperMsg('system', '❌ 發送失敗: ' + e.message);
