@@ -73,8 +73,12 @@ setTimeout(function() {
             <div class="status-panel">
                 <div>
                     <div class="status-item">時鐘基準：<span id="syncBadge" class="sync-badge sync-loading">🖥️ 本地系統時鐘</span> <span id="ntpStatus" style="font-size:11px; color:#64748b;"></span> <span id="ntpLoadingIndicator" style="display:inline-flex;align-items:center;gap:4px;color:#f59e0b;font-size:11px;"><span style="width:10px;height:10px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span>同步時間中...</span></div>
-                    <div class="status-item">全域觀測日期：<span id="lblGlobalDateDisplay">--</span></div>
-                </div>
+                    <div class="status-item">全域觀測日期：<span id="lblGlobalDateDisplay">--</span></div>                    <div class="status-item">時鐘基準：<span id="syncBadge" class="sync-badge sync-loading">🖥️ 本地系統時鐘</span> <span id="ntpStatus" style="font-size:11px; color:#64748b;"></span> <span id="ntpLoadingIndicator" style="display:inline-flex;align-items:center;gap:4px;color:#f59e0b;font-size:11px;"><span style="width:10px;height:10px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span>同步時間中...</span></div>
+                    <div class="status-item" style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:#9ca3af;font-size:12px;">📅</span>
+                        <input type="date" id="globalTargetDate" onchange="onGlobalDateChange()"
+                               style="background:#090d16;border:1px solid #374151;color:#fff;padding:3px 8px;border-radius:4px;font-size:12px;font-family:monospace;">
+                    </div>                </div>
                 <div style="text-align: right;">
                     <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1.5px;">Master Timecode</div>
                     <div id="clock" style="text-align:center;">00:00:00:00</div>
@@ -83,9 +87,7 @@ setTimeout(function() {
 
             <div class="global-filter-bar" style="display: none;">
                 <input type="date" id="globalTargetDate" onchange="onGlobalDateChange()">
-            </div>
-
-            <div id="page-live" class="page active">
+            </div>            <div id="page-live" class="page active">            <div id="page-live" class="page active">
 
                 <!-- ⏱ Cue 倒數大看板 — 首頁最上方 -->
                 <div id="homeCueCountdown" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border:2px solid #818cf8; border-radius:10px; padding:20px; margin-bottom:20px; text-align:center; box-shadow:0 0 24px rgba(129,140,248,0.2);">
@@ -219,8 +221,15 @@ setTimeout(function() {
                             <div class="calendar-nav-header">
                                 <div class="calendar-nav-btn" onclick="moveCalendarMonth(-1)">◀</div>
                                 <span id="calendarMonthLabel">2026 年 06 月</span>
+                                <div class="calendar-nav-btn" onclick="moveCalendarMonth(1)">▶</div>                            <div class="calendar-nav-header">
+                                <div class="calendar-nav-btn" onclick="moveCalendarMonth(-1)">◀</div>
+                                <span id="calendarMonthLabel">2026 年 06 月</span>
                                 <div class="calendar-nav-btn" onclick="moveCalendarMonth(1)">▶</div>
+                                <button class="calendar-nav-btn" onclick="goToToday()" style="font-size:11px;padding:2px 8px;">📅 今天</button>
                             </div>
+                            <div class="calendar-grid-head">
+                                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                            </div>                            </div>
                             <div class="calendar-grid-head">
                                 <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
                             </div>
@@ -1836,6 +1845,11 @@ setTimeout(function() {
         if (calCurrentMonth > 11) { calCurrentMonth = 0; calCurrentYear++; }
         if (calCurrentMonth < 0) { calCurrentMonth = 11; calCurrentYear--; }
         renderGUICalendar();
+    }
+    function goToToday() {
+        const today = getTodayStr();
+        document.getElementById('globalTargetDate').value = today;
+        onGlobalDateChange();
     }
 
     // --- 首頁 MCR 交通摘要與時序檢查安全計算 ---
