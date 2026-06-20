@@ -2595,17 +2595,17 @@
         document.getElementById('presetSelector').value = "";
         document.getElementById('presetNameField').value = "自訂邏輯_" + Math.floor(Math.random()*1000);
         renderPresetNodes([
-            { offset: -300, name: "⏳ 播出前五分", freq: 600, soundId: "bell" },
-            { offset: -180, name: "⏳ 播出前三分", freq: 800, soundId: "short_beep" },
-            { offset: -60, name: "⏳ 播出前一分", freq: 900, soundId: "tone" },
-            { offset: -30, name: "🔔 播出前30秒", freq: 1000, soundId: "double_beep" },
-            { offset: -15, name: "🔔 播出前15秒倒數", freq: 1200, soundId: "triple_beep" },
-            { offset: 0, name: "▶ 播出", freq: 2000, soundId: "alert" },
-            { offset: "e-180", name: "⏳ 結束前三分", freq: 800, soundId: "short_beep" },
-            { offset: "e-60", name: "⏳ 結束前一分", freq: 900, soundId: "tone" },
+            { offset: -300, name: "⏳ 開始前5分", freq: 600, soundId: "bell" },
+            { offset: -180, name: "⏳ 開始前3分", freq: 800, soundId: "short_beep" },
+            { offset: -60, name: "⏳ 開始前1分", freq: 900, soundId: "tone" },
+            { offset: -30, name: "🔔 開始前30秒", freq: 1000, soundId: "double_beep" },
+            { offset: -15, name: "🔔 開始前15秒倒數", freq: 1200, soundId: "triple_beep" },
+            { offset: 0, name: "▶ 開播", freq: 2000, soundId: "alert" },
+            { offset: "e-180", name: "⏳ 結束前3分", freq: 800, soundId: "short_beep" },
+            { offset: "e-60", name: "⏳ 結束前1分", freq: 900, soundId: "tone" },
             { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
             { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
-            { offset: "e0", name: "■ 結束", freq: 500, soundId: "bell" }
+            { offset: "e0", name: "■ 播放結束", freq: 500, soundId: "bell" }
         ]);
         document.getElementById('presetJsonArea').value = '';
     }
@@ -2631,6 +2631,22 @@
                     { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
                     { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
                     { offset: "e0", name: "■ 結束", freq: 500, soundId: "bell" }
+                ]
+            },
+            "news_program": {
+                name: "新聞節目（一般）",
+                nodes: [
+                    { offset: -300, name: "⏳ 開始前5分", freq: 600, soundId: "bell" },
+                    { offset: -180, name: "⏳ 開始前3分", freq: 800, soundId: "short_beep" },
+                    { offset: -60, name: "⏳ 開始前1分", freq: 900, soundId: "tone" },
+                    { offset: -30, name: "🔔 開始前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: -15, name: "🔔 開始前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: 0, name: "▶ 開播", freq: 2000, soundId: "alert" },
+                    { offset: "e-180", name: "⏳ 結束前3分", freq: 800, soundId: "short_beep" },
+                    { offset: "e-60", name: "⏳ 結束前1分", freq: 900, soundId: "tone" },
+                    { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: "e0", name: "■ 播放結束", freq: 500, soundId: "bell" }
                 ]
             }
         };
