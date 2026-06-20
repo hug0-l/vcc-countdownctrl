@@ -331,6 +331,7 @@ setTimeout(function() {
                     </div>
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
                         <input type="text" id="searchRundown" placeholder="🔍 搜尋節目名稱..." oninput="filterRundown()" style="flex:1; background:#090d16; border:1px solid #374151; color:#fff; padding:6px 10px; border-radius:4px; font-size:12px; outline:none;">
+                        <button id="searchClearBtn" onclick="document.getElementById('searchRundown').value='';filterRundown();this.style.display='none';" style="display:none;background:transparent;border:none;color:#64748b;cursor:pointer;font-size:14px;padding:4px;">✕</button>
                     </div>
                     <table class="vcc-pre-table" id="rundownTable">
                         <thead>
@@ -4031,6 +4032,8 @@ setTimeout(function() {
             const name = nameCell.textContent.toLowerCase();
             row.style.display = (query === '' || name.indexOf(query) >= 0) ? '' : 'none';
         });
+        var clearBtn = document.getElementById('searchClearBtn');
+        if (clearBtn) clearBtn.style.display = query ? 'inline' : 'none';
     }
 
     // ===== 矩陣點擊排程編輯 =====
@@ -4116,6 +4119,10 @@ setTimeout(function() {
         const room = document.getElementById('clipperRoomCode').value.trim() || '1234';
         const displayName = document.getElementById('clipperDisplayName').textContent.trim() || 'VPRE';
         
+        // Show loading state on all Clipper connect buttons
+        var clipperBtns = document.querySelectorAll('[onclick*="clipperConnect"]');
+        clipperBtns.forEach(function(btn) { btn.innerText = '⏳ 連線中...'; btn.disabled = true; });
+        
         if (clipper) { clipper.disconnect(); }
         
         clipper = new ClipperSDK({ server: url, room, displayName });
@@ -4123,11 +4130,17 @@ setTimeout(function() {
         clipper.on('connected', function() {
             updateClipperStatus('connected', '🟢 已連線');
             appendClipperMsg('system', '✅ 已加入房間');
+            // Restore connect buttons
+            var restoreBtns = document.querySelectorAll('[onclick*="clipperConnect"]');
+            restoreBtns.forEach(function(btn) { btn.innerText = btn.classList.contains('btn-ctrl') ? '🔗 連線' : '🔄'; btn.disabled = false; });
         });
         
         clipper.on('disconnected', function() {
             updateClipperStatus('disconnected', '🔴 未連線');
             appendClipperMsg('system', '⚠️ 與伺服器斷線');
+            // Restore connect buttons
+            var restoreBtns = document.querySelectorAll('[onclick*="clipperConnect"]');
+            restoreBtns.forEach(function(btn) { btn.innerText = btn.classList.contains('btn-ctrl') ? '🔗 連線' : '🔄'; btn.disabled = false; });
         });
         
         clipper.on('chat', function(msg) {

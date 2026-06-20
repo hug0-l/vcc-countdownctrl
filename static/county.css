@@ -68,7 +68,8 @@
         /* 右側核心工作區 */
         .main-content { flex: 1; padding: 25px; overflow-y: auto !important; height: 100%; background-color: var(--bg-dark); }
         .page { display: none; }
-        .page.active { display: block; }
+        .page.active { display: block; animation: pageFadeIn 0.15s ease; }
+        @keyframes pageFadeIn { 0% { opacity:0; transform:translateY(4px); } 100% { opacity:1; transform:translateY(0); } }
 
         /* 模組容器 */
         .panel-box {
