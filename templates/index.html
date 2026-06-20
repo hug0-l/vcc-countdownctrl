@@ -87,7 +87,8 @@ setTimeout(function() {
 
             <div class="global-filter-bar" style="display: none;">
                 <input type="date" id="globalTargetDate" onchange="onGlobalDateChange()">
-            </div>            <div id="page-live" class="page active">            <div id="page-live" class="page active">
+            </div>
+            <div id="page-live" class="page active">
 
                 <!-- ⏱ Cue 倒數大看板 — 首頁最上方 -->
                 <div id="homeCueCountdown" class="cue-countdown-card">
@@ -396,6 +397,7 @@ setTimeout(function() {
                                 </tbody>
                             </table>
                             <button class="btn-sync" onclick="addNodeRow()" style="font-size:12px; padding:5px 10px;">＋ 新增</button>
+                            <button class="btn-ctrl btn-export-ui" onclick="sortNodesByCueOrder()" style="font-size:11px;padding:4px 10px;">⏱ Cue 順序</button>
                         </div>
                     </div>
                     <div class="btn-zone">
@@ -403,7 +405,11 @@ setTimeout(function() {
                         <button class="btn-add" style="background-color: #10b981;" onclick="savePresetAction()">儲存</button>
                         <button class="btn-cancel btn-danger-action" onclick="deletePresetAction()">刪除</button>
                     </div>
-                    <div style="margin-top:10px; border-top:1px solid #1f2937; padding-top:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 10px;background:#111827;border:1px solid #1f2937;border-radius:4px;">
+                        <input type="checkbox" id="cfgPresetProtection" onchange="saveConfig(); refreshPresetDropdownUI();" style="width:16px;height:16px;" checked>
+                        <span style="font-size:12px;color:#9ca3af;">🔒 保護內建 Preset（關閉後可刪除）</span>
+                    </div>
+                    <div style="margin-top:8px; border-top:1px solid #1f2937; padding-top:8px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
                             <span style="font-size:12px; color:#64748b; cursor:pointer;" onclick="togglePresetJsonArea()" id="presetJsonToggle">▶ JSON</span>
                             <input type="file" id="presetImportFile" accept=".json" style="display:none;" onchange="importPresetFromFile(this)">
@@ -496,18 +502,6 @@ setTimeout(function() {
                                     <span style="font-size:11px; color:#64748b;">秒</span>
                                 </div>
                                 <div style="font-size:11px; color:#64748b; margin-top:4px;">觸發後在矩陣中保留多久</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="panel-box" style="margin-top:15px;">
-                        <div class="panel-header-box"><div class="panel-title">🔒 Preset 保護</div></div>
-                        <div class="input-form" style="grid-template-columns: 1fr;">
-                            <div class="input-group">
-                                <label style="display:flex; align-items:center; gap:8px;cursor:pointer;">
-                                    <input type="checkbox" id="cfgPresetProtection" onchange="saveConfig(); refreshPresetDropdownUI();" style="width:18px;height:18px;" checked>
-                                    <span>啟用內建 Preset 刪除保護</span>
-                                </label>
-                                <div style="font-size:11px; color:#64748b; margin-top:4px;">開啟時，內建 Preset（🔒）無法刪除；關閉後可自由刪除</div>
                             </div>
                         </div>
                     </div>
@@ -2356,6 +2350,33 @@ setTimeout(function() {
         const tbody = document.getElementById('presetNodesTbody');
         tbody.innerHTML = '';
         data.forEach(function(d) { addNodeRow(d); });
+    }
+
+    // 一鍵按 Cue 觸發先後順序排列
+    function sortNodesByCueOrder() {
+        const tbody = document.getElementById('presetNodesTbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length < 2) return;
+        const REF = 1800;
+        rows.sort(function(a, b) {
+            var aType = a.querySelector('.offsetType').value;
+            var bType = b.querySelector('.offsetType').value;
+            var aSec = mmssToSec(a.querySelector('.offsetSec').value);
+            var bSec = mmssToSec(b.querySelector('.offsetSec').value);
+            function key(type, sec) {
+                if (type === '開始前') return -100000 - sec;
+                if (type === '開始後') return 0 + sec;
+                if (type === '結束前') return 100000 - sec;
+                if (type === '結束時') return 200000;
+                return 0;
+            }
+            return key(aType, aSec) - key(bType, bSec);
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+        document.querySelectorAll('#presetNodesTable .sort-icon').forEach(function(el) {
+            el.textContent = ''; el.classList.remove('active');
+        });
+        writeLog("⏱ 已按 Cue 觸發先後順序排列", 'info');
     }
 
     function onPresetSelectionChange() {
