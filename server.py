@@ -687,6 +687,8 @@ def get_config():
         'ntpLastOffset': '0',
         'ntpLastSyncTime': '',
         'lastSelectedDate': '',
+        'clipper_name': 'VPRE',
+        'app_version': '0.7',
     }
     for k, v in defaults.items():
         if k not in config:
