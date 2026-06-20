@@ -341,13 +341,185 @@
         @media(max-width:900px) { .help-grid { grid-template-columns:1fr; } }
         .help-card { background:#090d16; border:1px solid #1f2937; border-radius:6px; padding:12px; }
         .help-card h4 { color:#f59e0b; margin:0 0 6px 0; font-size:13px; }
+
+        /* ================================================================
+               Responsive / Adaptive Design — 確保操作員在各種視窗大小下
+               都能看到 essential 資料（大時鐘、下一Cue倒數）
+               ================================================================ */
+
+        /* --- Sidebar collapse (hamburger) for narrow screens --- */
+        .sidebar-toggle {
+            display: none; position:fixed; top:10px; left:10px; z-index:100;
+            background:#1f2937; color:#fff; border:none; border-radius:6px;
+            padding:8px 12px; font-size:18px; cursor:pointer;
+        }
+        .sidebar-overlay { display:none; }
+
+        @media(max-width: 900px) {
+            .sidebar-toggle { display:block; }
+            .sidebar {
+                position:fixed; left:-280px; top:0; height:100vh; z-index:99;
+                transition:left 0.25s ease; box-shadow:4px 0 20px rgba(0,0,0,0.5);
+            }
+            .sidebar.open { left:0; }
+            .sidebar-overlay.open {
+                display:block; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:98;
+            }
+            .vcc-pre-system-sandbox-wrapper { min-height:auto; }
+        }
+
+        /* --- General spacing --- */
+        @media(max-width: 768px) {
+            .main-content { padding:12px !important; }
+            .panel-box { padding:14px; }
+            .mcr-monitor-card { padding:14px; }
+            .traffic-summary-card { padding:14px; }
+        }
+
+        /* --- Status bar: stack on small screens, clock shrinks --- */
+        @media(max-width: 900px) {
+            .status-panel { flex-direction:column; align-items:stretch; gap:10px; }
+            .status-panel > div:last-child { text-align:left !important; }
+        }
+        @media(max-width: 600px) {
+            #clock { font-size:32px !important; }
+        }
+
+        /* --- Top action bar (backup/restore) wrap --- */
+        @media(max-width: 700px) {
+            .main-content > div[style*="display:flex"][style*="align-items:center"][style*="gap:8px"][style*="margin-bottom:8px"] {
+                flex-wrap:wrap; gap:4px;
+            }
+        }
+
+        /* --- Homepage: Cue countdown timer scales down --- */
+        @media(max-width: 700px) {
+            #homeCueCountdown { padding:12px 10px !important; }
+            #cueCountdownTimer { font-size:32px !important; }
+            #cueCountdownLabel { font-size:12px !important; }
+        }
+        @media(max-width: 480px) {
+            #cueCountdownTimer { font-size:24px !important; }
+        }
+
+        /* --- Current/Next Cue cards: stack vertically on small screens --- */
+        @media(max-width: 700px) {
+            #page-live > .panel-box > div[style*="display:flex"][style*="margin:8px 0"] {
+                flex-direction:column !important;
+            }
+            #page-live > .panel-box > div[style*="display:flex"][style*="margin:8px 0"] > div {
+                border-left:none !important; border-top:none !important;
+            }
+            #page-live > .panel-box > div[style*="display:flex"][style*="margin:8px 0"] > div:first-child {
+                border-bottom:1px solid rgba(239,68,68,0.2) !important;
+            }
+        }
+
+        /* --- Timeline: hide labels, smaller text --- */
+        @media(max-width: 1000px) {
+            .timeline-label { min-width:50px; font-size:9px; }
+            .timeline-track-label { width:60px; min-width:60px; font-size:8px; }
+        }
+        @media(max-width: 700px) {
+            .timeline-panel { display:none !important; }
+        }
+
+        /* --- Matrix: ensure horizontal scroll on small screens --- */
+        @media(max-width: 900px) {
+            .matrix-scroll-wrap { overflow-x:auto !important; }
+            .vcc-pre-table { font-size:11px; }
+            .vcc-pre-table th, .vcc-pre-table td { padding:6px 6px; }
+            .vcc-pre-table th:nth-child(3),
+            .vcc-pre-table td:nth-child(3) { display:none; }  /* hide Tags col */
+        }
+        @media(max-width: 600px) {
+            .vcc-pre-table th:nth-child(2),
+            .vcc-pre-table td:nth-child(2) { display:none; }  /* hide Prog TC col */
+            .vcc-pre-table th:nth-child(5),
+            .vcc-pre-table td:nth-child(5) { display:none; }  /* hide Target TC col */
+        }
+
+        /* --- mcr-operator-grid: more fine-grained breakpoints --- */
+        @media(max-width: 1400px) {
+            .mcr-operator-grid { grid-template-columns:1.1fr 0.9fr; }
+        }
+        @media(max-width: 900px) {
+            .mcr-operator-grid { grid-template-columns:1fr; }
+            .mcr-prog-title { font-size:20px !important; }
+            .mcr-prog-countdown { font-size:18px !important; }
+        }
+
+        /* --- Traffic summary card: single column on small screens --- */
+        @media(max-width: 600px) {
+            .traffic-summary-card { grid-template-columns:1fr !important; }
+            .traffic-summary-card > div[style*="grid-column: span 2"] {
+                grid-column:span 1 !important; flex-direction:column !important; gap:8px !important;
+            }
+        }
+
+        /* --- Settings page: 2-col → 1-col --- */
+        @media(max-width: 1200px) {
+            #page-settings > div[style*="grid-template-columns"] {
+                grid-template-columns:1fr !important;
+            }
+        }
+
+        /* --- Preset page: JSON area full width --- */
+        @media(max-width: 600px) {
+            #presetNodesTable { font-size:11px; }
+            #presetNodesTable th, #presetNodesTable td { padding:2px; }
+        }
+
+        /* --- Consoles and textareas: adjust height on small screens --- */
+        @media(max-width: 600px) {
+            .console-terminal { height:80px !important; font-size:10px !important; }
+            #serverLogArea { height:100px !important; }
+            #configJsonArea { height:60px !important; }
+        }
+
+        /* --- Clipper IM: stack header on small screens --- */
+        @media(max-width: 700px) {
+            #page-clipper .panel-header-box { flex-direction:column; gap:6px; align-items:flex-start !important; }
+            #page-clipper div[style*="display:flex"][style*="gap:8px"] {
+                flex-wrap:wrap;
+            }
+            #clipperInput { min-width:120px; }
+        }
+
+        /* --- Rundown page: table column hiding --- */
+        @media(max-width: 1000px) {
+            #rundownTable th:nth-child(4),
+            #rundownTable td:nth-child(4) { display:none; }  /* hide end time */
+            #rundownTable th:nth-child(7),
+            #rundownTable td:nth-child(7) { display:none; }  /* hide preset */
+        }
+        @media(max-width: 700px) {
+            #rundownTable th:nth-child(5),
+            #rundownTable td:nth-child(5) { display:none; }  /* hide duration */
+            #rundownTable th:nth-child(6),
+            #rundownTable td:nth-child(6) { display:none; }  /* hide periodic type */
+        }
+
+        /* --- Week glance: smaller text --- */
+        @media(max-width: 700px) {
+            .week-day-header span { font-size:14px !important; }
+            .week-day-header { font-size:9px !important; padding:4px 2px !important; }
+            .week-prog-block { font-size:8px !important; padding:2px !important; }
+            .week-prog-block .wp-name { font-size:8px !important; }
+        }
+        @media(max-width: 480px) {
+            .week-grid { grid-template-columns:repeat(7,minmax(0,1fr)); }
+        }
     </style>
 </head>
 <body>
 
     <div class="vcc-pre-system-sandbox-wrapper">
 
-        <div class="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+
+        <div class="sidebar" id="mainSidebar">
             <div>
                 <div class="sidebar-header">VCC PRE 排控調度中心 v0.5</div>
                 <div class="sidebar-menu">
@@ -1768,6 +1940,19 @@
         document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
         writeLog('⬇ 伺服器日誌已匯出', 'success');
+    }
+
+    // ===== Sidebar hamburger toggle (responsive) =====
+    function toggleSidebar() {
+        document.getElementById('mainSidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('open');
+        // Auto-close on menu click
+        if (document.getElementById('mainSidebar').classList.contains('open')) {
+            document.querySelectorAll('#mainSidebar .menu-item').forEach(function(el) {
+                el._listener = function() { toggleSidebar(); };
+                el.addEventListener('click', el._listener);
+            });
+        }
     }
 
     function switchPage(pageId) {
