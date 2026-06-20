@@ -1,21 +1,21 @@
-# VPre CountdownCtrl — Agent 工作指南
+# County — Agent 工作指南
 
 ## 📌 專案概述
-**VPre CountdownCtrl** 是一個廣播電視台排控中心的 **Python 後端 + 前端 SPA** 混合架構。
+**County** 是一個廣播電視台排控中心的 **Python 後端 + 前端 SPA** 混合架構。
 - 前端 SPA 集中於 `templates/index.html`（~3800 行）
 - 後端使用 **FastAPI + SQLite + ntplib**（`server.py`）
 - 支援節目排程管理、Cue 提示點觸發、時間軸視覺化。
 
 ## 🏗️ 檔案結構
 ```
-vcc-countdownctrl/
+county/
 ├── server.py                        # 🚀 Python 後端 (FastAPI + SQLite + ntplib)
 ├── requirements.txt                 # Python 依賴
 ├── templates/
 │   └── index.html                   # 📄 主系統 SPA（所有 JS/CSS/HTML 集中此檔）
 ├── static/                          # 靜態資源目錄
 ├── backups/                         # 自動備份目錄
-├── vcc_pre.db                       # SQLite 資料庫（執行後自動產生）
+├── county.db                       # SQLite 資料庫（執行後自動產生）
 ├── README.md                        # 架構文件（開發前請先閱讀）
 ├── AGENTS.md                        # 本文件（Agent 工作指引）
 ├── CHANGELOG.md                     # 版本歷史
@@ -102,7 +102,7 @@ offset_ms = response.offset * 1000  # seconds → ms
 
 ### 資料持久化
 - **後端 SQLite**：`ntp_logs` 資料表記錄每次 NTP 同步（時間戳、狀態、偏移量、錯誤訊息）
-- **前端 localStorage**：`vcc_pre_ntp_*` 暫存偏移量與最後同步時間（後端離線備援）
+- **前端 localStorage**：`county_ntp_*` 暫存偏移量與最後同步時間（後端離線備援）
 - **Config JSON**：NTP 設定也保存在 `appConfig.ntp*` 字段中，可透過 Config JSON 面板匯出/匯入
 
 ## ⚠️ 關鍵注意事項（Gotchas）
@@ -110,12 +110,12 @@ offset_ms = response.offset * 1000  # seconds → ms
 1. **後端優先** — 啟動前先 `python server.py`，前端 SPA 由 FastAPI 提供服務。直接用瀏覽器開啟 `templates/index.html` 會缺少 API 支援。
 2. **NTP 使用 UDP port 123** — `ntplib` 透過 UDP 連接 `stdtime.gov.hk`。若防火牆阻擋 UDP 123，NTP 會降級至本地時鐘。
 3. **timeOffset 全局變數** — `let timeOffset = 0`。`getCalibratedDate()` 使用 `Date.now() + timeOffset` 做時間校正。
-4. **SQLite 資料庫 (`vcc_pre.db`)** — 所有資料持久化在 SQLite。若資料庫損毀，可刪除後重啟伺服器（會重新建立空資料庫）。
+4. **SQLite 資料庫 (`county.db`)** — 所有資料持久化在 SQLite。若資料庫損毀，可刪除後重啟伺服器（會重新建立空資料庫）。
 5. **重要 localStorage key**：
-   - `vcc_pre_master_db_v8` — 排程資料庫（離線備援）
-   - `vcc_pre_presets_v8` — Cue Preset 庫（離線備援）
-   - `vcc_pre_config_v8` — 應用設定（離線備援）
-   - `vcc_pre_ntp_*` (x4) — NTP 時間服務暫存
+   - `county_master_db_v8` — 排程資料庫（離線備援）
+   - `county_presets_v8` — Cue Preset 庫（離線備援）
+   - `county_config_v8` — 應用設定（離線備援）
+   - `county_ntp_*` (x4) — NTP 時間服務暫存
 6. **時碼格式** — 固定 `HH:MM:SS:FF`（Frame 為單位，預設 PAL 25fps）
 7. **引擎 40ms timer** — `timerInterval = setInterval(updateGlobalDashboard, 40)`，只在首頁全量更新，其它頁面輕量 CUE 檢查。
 8. **AudioContext 需要用戶手勢** — 首次播放需要用戶點擊解鎖，聲音模組已內建 `actx.resume()` 處理。
@@ -152,4 +152,4 @@ offset_ms = response.offset * 1000  # seconds → ms
 ## 📝 版本控制
 - Branch: `main`（正式版）
 - Branch: `test`（測試版）
-- Remote: git@github.com:hug0-l/vcc-countdownctrl.git
+- Remote: git@github.com:hug0-l/county.git

@@ -1,4 +1,4 @@
-# VPre CountdownCtrl — 更新日誌
+# County — 更新日誌
 
 ## v0.7 (2026-06-20)
 - **💬 Clipper IM 即時通訊分頁** — 側邊欄加入「💬 Clipper IM」分頁，WebSocket 即時聊天

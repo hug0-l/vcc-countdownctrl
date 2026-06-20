@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>VCC PRE 廣播主控室操作員矩陣首頁系統 v0.5</title>
+    <title>County 廣播主控室操作員系統 v0.5</title>
     <style>
         body {
             margin: 0;
@@ -527,7 +527,7 @@
 
         <div class="sidebar" id="mainSidebar">
             <div>
-                <div class="sidebar-header">VCC PRE 排控調度中心 v0.5</div>
+                <div class="sidebar-header">County 排控調度中心</div>
                 <div class="sidebar-menu">
                     <div class="menu-item active" id="menu-live" onclick="switchPage('live')">📡 首頁 (MCR Home)</div>
                     <div class="menu-item" id="menu-rundown" onclick="switchPage('rundown')">📅 排程</div>
@@ -1111,7 +1111,7 @@
 <script src="/static/clipper-sdk.js"></script>
 <script>
     // ============================================================================
-    // VCC PRE — 廣播排控自動化系統 v0.5
+    // County — 廣播排控自動化系統 v0.5
     // ============================================================================
     // 適用於廣播電視操作員，單一 HTML 檔案，無伺服器依賴。
     //
@@ -1161,15 +1161,15 @@
         if (!ds) return;
         if (ds.presets && typeof ds.presets === 'object') {
             cuePresets = ds.presets;
-            localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+            localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
         }
         if (Array.isArray(ds.schedule)) {
             masterScheduleDB = ds.schedule;
-            localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+            localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
         }
         if (ds.config) {
             appConfig = ds.config;
-            localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+            localStorage.setItem('county_config_v8', JSON.stringify(appConfig));
             frameRate = appConfig.frameRate || 25;
             document.getElementById('cfgFrameRate').value = frameRate;
             document.getElementById('cfgBeepFreq').value = appConfig.beepFreq || 1500;
@@ -1183,9 +1183,9 @@
     function markDirty() {
         // 同步儲存到 localStorage
         try {
-            localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
-            localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
-            localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig || {}));
+            localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
+            localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
+            localStorage.setItem('county_config_v8', JSON.stringify(appConfig || {}));
         } catch(e) {}
         const indicator = document.getElementById('dataDirtyIndicator');
         if (indicator) indicator.innerText = '✅ 已儲存';
@@ -1212,7 +1212,7 @@
                 API.loadSchedules().then(function(apiData) {
                     if (apiData && apiData.length > 0) {
                         masterScheduleDB = apiData.map(normalizeScheduleFromApi);
-                        localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+                        localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
                     }
                     renderGUICalendar(); renderWeekGlance(); calculateMCRTrafficSummary(); renderRundownUI();
                     refreshPresetDropdownUI(); onPresetSelectionChange();
@@ -1455,13 +1455,13 @@
         appConfig.ntpAutoSyncInterval = NTPManager.config.ntpAutoSyncInterval;
         appConfig.ntpLastOffset = NTPManager.offset;
         appConfig.ntpLastSyncTime = NTPManager.lastSyncTime || '';
-        localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+        localStorage.setItem('county_config_v8', JSON.stringify(appConfig));
         // Also sync to server (non-blocking, fire-and-forget)
         API.saveConfig(appConfig);
     }
 
     function loadConfig() {
-        const raw = localStorage.getItem('vcc_pre_config_v8');
+        const raw = localStorage.getItem('county_config_v8');
         if (raw) {
             try { appConfig = JSON.parse(raw); } catch(e) { appConfig = defaultConfig(); }
         } else {
@@ -1592,7 +1592,7 @@
             if (newCfg.frameRate === undefined) { alert("Config 必須包含 frameRate"); return; }
             // 套用到 UI 與全域變數
             appConfig = newCfg;
-            localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+            localStorage.setItem('county_config_v8', JSON.stringify(appConfig));
             // Also sync to server (non-blocking, fire-and-forget)
             API.saveConfig(appConfig);
             frameRate = appConfig.frameRate;
@@ -1765,7 +1765,7 @@
             const raw = localStorage.getItem(CLIENT_LOG_KEY);
             if (!raw) { alert('尚無日誌記錄'); return; }
             const logs = JSON.parse(raw);
-            let text = '# VCC PRE Client Log — ' + new Date().toISOString().split('T')[0] + '\n';
+            let text = '# County Client Log — ' + new Date().toISOString().split('T')[0] + '\n';
             text += '# Lines: ' + logs.length + '\n';
             text += '# Generated: ' + new Date().toISOString() + '\n';
             text += '# ========================================\n\n';
@@ -1777,7 +1777,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'vcc_pre_client_log_' + new Date().toISOString().split('T')[0] + '.log';
+            a.download = 'county_client_log_' + new Date().toISOString().split('T')[0] + '.log';
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -1817,7 +1817,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'vcc_pre_server_log_' + new Date().toISOString().split('T')[0] + '.log';
+        a.download = 'county_server_log_' + new Date().toISOString().split('T')[0] + '.log';
         document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
         writeLog('⬇ 伺服器日誌已匯出', 'success');
@@ -2172,7 +2172,7 @@
     }
 
     window.onload = function() {
-        writeLog("VCC PRE 廣播自動化主控調度系統初始化...", 'info');
+        writeLog("County 系統初始化...", 'info');
 
         setupTimecodeMask('startTimeStr');
         setupTimecodeMask('durationStr');
@@ -2184,7 +2184,7 @@
 
         // 從 localStorage 載入（同步快速啟動），非同步從 IndexedDB 補齊
         // 載入 Preset，若有舊版 std_news 則遷移至新 Preset
-        const localPresets = localStorage.getItem('vcc_pre_presets_v8');
+        const localPresets = localStorage.getItem('county_presets_v8');
         if (localPresets) {
             try {
                 cuePresets = JSON.parse(localPresets);
@@ -2194,11 +2194,11 @@
                     delete cuePresets["short_promo"];
                     var _mNew = getDefaultPresets();
                     for (var _mk in _mNew) { if (!cuePresets[_mk]) cuePresets[_mk] = _mNew[_mk]; }
-                    localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+                    localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
                 }
             } catch(e) { loadDefaultPresets(); }
         } else { loadDefaultPresets(); }
-        const localDB = localStorage.getItem('vcc_pre_master_db_v8');
+        const localDB = localStorage.getItem('county_master_db_v8');
         if (localDB) { try { masterScheduleDB = JSON.parse(localDB); } catch(e) { masterScheduleDB = []; } }
         
         // 使用 localStorage 資料，無 IndexedDB
@@ -2565,7 +2565,7 @@
         });
         const targetId = selId ? selId : "preset_" + Date.now();
         cuePresets[targetId] = { name: name, nodes: parsedNodes };
-        localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+        localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
         // Also sync to server (non-blocking, fire-and-forget)
         API.savePreset({ id: targetId, name: name, nodes: parsedNodes });
         refreshPresetDropdownUI();
@@ -2622,7 +2622,7 @@
 
     function loadDefaultPresets() {
         cuePresets = getDefaultPresets();
-        localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+        localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
         // Sync default presets to server
         for (var _pid in cuePresets) {
             API.savePreset({ id: _pid, name: cuePresets[_pid].name, nodes: cuePresets[_pid].nodes });
@@ -2688,7 +2688,7 @@
     }
 
     function saveToLocalStorage() {
-        localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+        localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
         refreshJsonInspectorProbe();
         markDirty();
         // Also sync to server (non-blocking, fire-and-forget)
@@ -2714,7 +2714,7 @@
         if (!id || id === "pre_broadcast") return;
         if (confirm("確定刪除此預設集？")) {
             delete cuePresets[id];
-            localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+            localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
             API.deletePreset(id);  // sync to server
             masterScheduleDB.forEach(function(p) { if (p.presetId === id) p.presetId = "pre_broadcast"; });
             saveToLocalStorage(); refreshPresetDropdownUI();
@@ -2797,7 +2797,7 @@
             const selId = document.getElementById('presetSelector').value;
             const targetId = selId && cuePresets[selId] ? selId : "preset_" + Date.now();
             cuePresets[targetId] = { name: data.name, nodes: data.nodes };
-            localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+            localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
             API.savePreset({ id: targetId, name: data.name, nodes: data.nodes });  // sync to server
             refreshPresetDropdownUI();
             document.getElementById('presetSelector').value = targetId;
@@ -2861,7 +2861,7 @@
                 });
 
                 masterScheduleDB = Object.values(apiMap);
-                localStorage.setItem('vcc_pre_master_db_v8', JSON.stringify(masterScheduleDB));
+                localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
                 onGlobalDateChange();
                 renderRundownUI();
                 if (isTrackingActive) calculateGlobalTimelineMatrix(true);
@@ -2874,7 +2874,7 @@
             if (apiData && apiData.length > 0) {
                 cuePresets = {};
                 apiData.forEach(function(p) { cuePresets[p.id] = normalizePresetFromApi(p); });
-                localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+                localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
                 refreshPresetDropdownUI();
                 onPresetSelectionChange();
             }
@@ -2886,7 +2886,7 @@
                 appConfig.beepFreq = parseFloat(appConfig.beepFreq) || 1500;
                 appConfig.beepDur = parseFloat(appConfig.beepDur) || 0.5;
                 appConfig.retentionSeconds = parseInt(appConfig.retentionSeconds) || 5;
-                localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
+                localStorage.setItem('county_config_v8', JSON.stringify(appConfig));
                 frameRate = appConfig.frameRate;
                 document.getElementById('cfgFrameRate').value = frameRate;
                 document.getElementById('cfgBeepFreq').value = appConfig.beepFreq;
@@ -3295,7 +3295,7 @@
     }
 
     function clearAllPrograms() {
-        if (confirm("確定全清 VCC PRE 編排庫？所有常規設定將消失。")) {
+        if (confirm("確定全清 County 編排庫？所有常規設定將消失。")) {
             if (currentEditingId !== null) exitEditMode();
             masterScheduleDB.forEach(function(p) {
                 API.deleteSchedule(p.id).catch(function() {
@@ -3486,7 +3486,7 @@
         }
         const sideEng = document.getElementById('sidebarEngineStatus');
         if (sideEng) sideEng.innerText = '🟢 ENGINE ON-AIR';
-        writeLog("VCC PRE 觀測日 [" + targetDateStr + "] 矩陣引擎鎖定並作為主控首頁核心。", 'warn');
+        writeLog("County 觀測日 [" + targetDateStr + "] 矩陣引擎鎖定並作為主控首頁核心。", 'warn');
 
         calculateGlobalTimelineMatrix(false);
         if (timerInterval) clearInterval(timerInterval);

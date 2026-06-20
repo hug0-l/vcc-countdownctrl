@@ -23,7 +23,7 @@ python server.py
 
 ---
 
-# VPre CountdownCtrl — 廣播排控倒數系統架構文件
+# County — 廣播排控倒數系統架構文件
 
 ## 📋 目錄
 1. [系統概述](#1-系統概述)
@@ -42,7 +42,7 @@ python server.py
 
 ## 1. 系統概述
 
-**VPre CountdownCtrl** 是一個廣播電視台排控中心的 **單頁應用 (SPA)**，提供以下核心功能：
+**County** 是一個廣播電視台排控中心的 **單頁應用 (SPA)**，提供以下核心功能：
 
 - **節目排程管理** — CRUD 管理常規/週期性節目，支援行事曆視圖
 - **Preset Cue 預設集** — 為每個節目設定提示點（Cue Point）的時間偏移與提示音
@@ -56,14 +56,14 @@ python server.py
 ## 2. 檔案結構
 
 ```
-vcc-countdownctrl/
+county/
 ├── server.py                        # 🚀 Python 後端伺服器 (FastAPI + SQLite + ntplib)
 ├── requirements.txt                 # Python 依賴
 ├── templates/
 │   └── index.html                   # 📄 主系統 SPA（JS/CSS/HTML 集中此檔）
 ├── static/                          # 靜態資源目錄
 ├── backups/                         # 自動備份目錄
-├── vcc_pre.db                       # SQLite 資料庫（執行後自動產生）
+├── county.db                       # SQLite 資料庫（執行後自動產生）
 ├── README.md                        # 📄 本架構文件
 ├── AGENTS.md                        # Agent 工作指引
 ├── CHANGELOG.md                     # 版本歷史
@@ -81,7 +81,7 @@ vcc-countdownctrl/
 ┌──────────────────────────────────────┐
 │  Sidebar (260px)  │    Main Content  │
 │  ┌──────────────┐ │  ┌────────────┐ │
-│  │ VCC PRE 排控  │ │  │ Status Bar │ │
+│  │ County 排控  │ │  │ Status Bar │ │
 │  │ 調度中心 v0.5 │ │  │ (時鐘+NTP) │ │
 │  ├──────────────┤ │  ├────────────┤ │
 │  │ 📡 首頁       │ │  │            │ │
@@ -342,7 +342,7 @@ checkCueTriggersOnly() / updateGlobalDashboard()
   ├─ deleteProgram(id)
   ├─ duplicateProgram(id)
   └─ clearAllPrograms()
-       └─ saveToLocalStorage() ──→ localStorage["vcc_pre_master_db_v8"]
+       └─ saveToLocalStorage() ──→ localStorage["county_master_db_v8"]
 
 引擎啟動
   └─ initGlobalTracking()
@@ -472,7 +472,7 @@ const MATRIX_COLORS = [
 
 ### 9.1 後端資料庫 (SQLite)
 
-v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、設定皆持久化在 `vcc_pre.db` 中。
+v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、設定皆持久化在 `county.db` 中。
 
 | 資料表 | 用途 | 說明 |
 |--------|------|------|
@@ -488,11 +488,11 @@ v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、
 
 | Key | 內容 | 格式 |
 |-----|------|------|
-| `vcc_pre_master_db_v8` | 主排程資料庫 | JSON Array |
-| `vcc_pre_presets_v8` | Cue Preset 庫 | JSON Object |
-| `vcc_pre_config_v8` | 應用設定 | JSON Object |
-| `vcc_pre_dismissed` | 已關閉的提示 | JSON Array |
-| `vcc_pre_ntp_*` (x4) | NTP 時間服務暫存 | 各別值 |
+| `county_master_db_v8` | 主排程資料庫 | JSON Array |
+| `county_presets_v8` | Cue Preset 庫 | JSON Object |
+| `county_config_v8` | 應用設定 | JSON Object |
+| `county_dismissed` | 已關閉的提示 | JSON Array |
+| `county_ntp_*` (x4) | NTP 時間服務暫存 | 各別值 |
 
 > 後端離線時，系統自動使用 localStorage 作為降級儲存，確保廣播作業不中斷。
 
@@ -528,7 +528,7 @@ v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、
 
 ### 10.3 資料安全
 
-- **主要儲存**：所有資料持久化在 `vcc_pre.db`（SQLite），伺服器重啟不遺失
+- **主要儲存**：所有資料持久化在 `county.db`（SQLite），伺服器重啟不遺失
 - **自動備份**：伺服器每次啟動自動產生日期備份檔至 `backups/` 目錄
 - **離線降級**：前端 localStorage 作為備援，後端不可用時仍可讀寫
 - **無權限控管** — 所有操作員皆可修改所有設定
@@ -548,7 +548,7 @@ v0.6 開始使用 **SQLite** 作為主要資料儲存，所有排程、Preset、
 ## 11. NTP 時間服務（v0.6 新增）
 
 ### 11.1 概述
-VCC PRE v0.6 新增 **真實 NTP 校時** 功能，使用 Python `ntplib` 透過 UDP port 123 連接香港天文台 `stdtime.gov.hk`，精度可達 ±5ms。
+County v0.6 新增 **真實 NTP 校時** 功能，使用 Python `ntplib` 透過 UDP port 123 連接香港天文台 `stdtime.gov.hk`，精度可達 ±5ms。
 
 ### 11.2 架構
 
@@ -620,8 +620,8 @@ class NTPManager:
 | 立即同步 | `btnNtpSync` | Button | 手動觸發同步 |
 
 ### 11.6 持久化
-- **後端**：每次 NTP 同步記錄寫入 `vcc_pre.db` 的 `ntp_logs` 資料表
-- **前端**：偏移量與最後同步時間暫存於 localStorage（`vcc_pre_ntp_*`），作為後端離線時的備援
+- **後端**：每次 NTP 同步記錄寫入 `county.db` 的 `ntp_logs` 資料表
+- **前端**：偏移量與最後同步時間暫存於 localStorage（`county_ntp_*`），作為後端離線時的備援
 - **Config**：NTP 設定也保存在 `appConfig.ntp*` 字段中，可透過 Config JSON 面板匯出/匯入
 
 ### 11.7 已知限制

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VCC PRE CountdownCtrl — Backend Server
+County — Backend Server
 FastAPI + SQLite + ntplib NTP syncing
 Single-file server. python server.py to start.
 """
@@ -32,7 +32,7 @@ LOGS_DIR.mkdir(exist_ok=True)
 
 # Current server log file path (one log per day for 24h retention)
 def _current_log_path() -> Path:
-    return LOGS_DIR / f"vcc_pre_{date.today().isoformat()}.log"
+    return LOGS_DIR / f"county_{date.today().isoformat()}.log"
 
 
 
@@ -60,7 +60,7 @@ def _clean_old_logs():
     now = time.time()
     cutoff = now - 86400
     for f in LOGS_DIR.iterdir():
-        if f.name.startswith("vcc_pre_") and f.suffix == ".log" and f.stat().st_mtime < cutoff:
+        if f.name.startswith("county_") and f.suffix == ".log" and f.stat().st_mtime < cutoff:
             try:
                 f.unlink()
                 _append_log("INFO", f"🧹 Removed old log: {f.name}")
@@ -74,7 +74,7 @@ _clean_old_logs()
 # Database
 # ---------------------------------------------------------------------------
 
-DB_PATH = Path(__file__).parent / "vcc_pre.db"
+DB_PATH = Path(__file__).parent / "county.db"
 
 
 def get_db() -> sqlite3.Connection:
@@ -360,7 +360,7 @@ ntp_manager = NTPManager()
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="VCC PRE CountdownCtrl Backend", version="0.1")
+app = FastAPI(title="County Backend", version="0.1")
 
 # CORS — allow all origins
 app.add_middleware(
@@ -450,7 +450,7 @@ def startup():
     # Auto-backup on server start
     os.makedirs(BACKUP_DIR, exist_ok=True)
     today = date.today().isoformat()
-    backup_path = os.path.join(BACKUP_DIR, f'vcc_pre_{today}.json')
+    backup_path = os.path.join(BACKUP_DIR, f'county_{today}.json')
     if not os.path.exists(backup_path):
         try:
             data = {
@@ -568,7 +568,7 @@ def download_backup():
     }
     return JSONResponse(
         content=backup,
-        headers={'Content-Disposition': 'attachment; filename="vcc_pre_backup.json"'}
+        headers={'Content-Disposition': 'attachment; filename="county_backup.json"'}
     )
 
 
@@ -734,7 +734,7 @@ async def download_log_file():
     return FileResponse(
         str(log_file),
         media_type="text/plain",
-        filename="vcc_pre_server.log"
+        filename="county_server.log"
     )
 
 
