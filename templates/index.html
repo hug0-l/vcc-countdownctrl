@@ -2455,7 +2455,19 @@
             el.textContent = ''; el.classList.remove('active');
         });
         if (!nodes || nodes.length === 0) { addNodeRow(); return; }
-        nodes.forEach(function(n) {
+        // 按觸發時序排列（估算參考時長 30 分鐘）
+        var sortedNodes = nodes.slice().sort(function(a, b) {
+            function estAbsSec(n) {
+                var os = n.offset;
+                if (typeof os === 'number') return os < 0 ? os : os; // 開始前/後
+                var eNum = parseInt(String(os).replace('e', '').replace('-', '')) || 0;
+                if (String(os).startsWith('e-')) return 1800 - eNum; // 結束前
+                if (os === 'e0') return 1800;                         // 結束時
+                return 1800 + eNum;                                   // 結束後(未使用)
+            }
+            return estAbsSec(a) - estAbsSec(b);
+        });
+        sortedNodes.forEach(function(n) {
             let offset = n.offset;
             let offsetType = '開始前';
             let offsetSec = 10;
@@ -2504,17 +2516,21 @@
         rows.forEach(function(row) {
             const sec = mmssToSec(row.querySelector('.offsetSec').value);
             const type = row.querySelector('.offsetType').value;
+            // 使用一個參考時長（30分鐘 = 1800秒）來估算絕對觸發時間，
+            // 讓不同偏移類型的節點可以按實際觸發時序正確排序
+            const REF_DURATION_SEC = 1800; // 30 min reference
+            let estimatedAbsSec;
+            if (type === "開始前") estimatedAbsSec = -sec;                // 開始前 → 負數
+            else if (type === "開始後") estimatedAbsSec = sec;            // 開始後 → 正數
+            else if (type === "結束前") estimatedAbsSec = REF_DURATION_SEC - sec; // 結束前 → 接近 REF_DURATION
+            else estimatedAbsSec = REF_DURATION_SEC;                      // 結束時 → REF_DURATION
+
             data.push({
                 offsetType: type,
                 offsetSec: sec,
                 nodeName: row.querySelector('.nodeName').value.trim(),
                 soundId: row.querySelector('.soundSelect').value,
-                chronoKey: (
-                    type === "開始前" ? -sec :
-                    type === "開始後" ? 1000000 + sec :
-                    type === "結束前" ? 2000000 - sec :
-                    3000000
-                )
+                chronoKey: estimatedAbsSec
             });
         });
 
