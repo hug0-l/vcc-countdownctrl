@@ -685,58 +685,54 @@ setTimeout(function() {
             </div>
 
             <div id="page-clipper" class="page">
-                <div class="panel-box">
-                    <div class="panel-header-box">
-                        <div class="panel-title">💬 Clipper IM — 即時通訊</div>
-                        <div style="font-size:11px; color:#64748b;">
-                            顯示名稱: <span id="clipperDisplayName" style="color:#38bdf8; font-weight:bold; cursor:pointer;" title="點擊編輯">VPRE</span>
-                            <span id="clipperStatus" class="sync-badge sync-loading" style="margin-left:8px;">🔴 未連線</span>
+                <div class="panel-box" style="padding:0;">
+                    <!-- Header -->
+                    <div class="clipper-header">
+                        <div class="clipper-header-left">
+                            <span style="font-size:14px;color:#38bdf8;font-weight:bold;">💬 Clipper IM</span>
+                            <span class="clipper-peer-count" id="clipperPeerCount" onclick="this.style.display=(this.style.display==='none'?'':'none')" style="cursor:pointer;" title="點擊隱藏">👥 <span>0</span></span>
                         </div>
-                    </div>
-                    
-                    <!-- 聊天訊息區 -->
-                    <div id="clipperMessages" style="height:400px; overflow-y:auto; background:#030712; border:1px solid #1f2937; border-radius:6px; padding:12px; margin-bottom:10px; font-size:13px; line-height:1.6;">
-                        <div style="color:#4b5563; text-align:center; padding:40px 0;">⏳ 正在連線至 Clipper 伺服器...</div>
-                    </div>
-                    
-                    <!-- 輸入區 -->
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="clipperInput" placeholder="輸入訊息後按 Enter 發送…" 
-                               style="flex:1; background:#090d16; border:1px solid #374151; color:#fff; padding:10px 12px; border-radius:4px; font-size:14px; outline:none;">
-                        <button class="btn-start" id="clipperSendBtn" style="padding:10px 20px; font-size:13px;">📤 發送</button>
-                        <button class="btn-sync" onclick="handleClipperConnect()" style="padding:10px 16px; font-size:12px;" title="重新連線">🔄</button>
-                    </div>
-                    
-                    <!-- 連線設定 -->
-                    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; font-size:11px; color:#64748b;">
-                        <span>伺服器:</span>
-                        <input type="text" id="clipperServerUrl" value="ws://localhost:8765" 
-                               style="width:200px; background:#090d16; border:1px solid #374151; color:#fff; padding:4px 8px; border-radius:3px; font-size:11px;">
-                        <span>配對碼:</span>
-                        <input type="text" id="clipperRoomCode" value="1234" 
-                               style="width:80px; background:#090d16; border:1px solid #374151; color:#fff; padding:4px 8px; border-radius:3px; font-size:11px;">
-                        <button class="btn-ctrl btn-export-ui" onclick="handleClipperConnect()" style="padding:3px 10px; font-size:10px;">🔗 連線</button>
+                        <div class="clipper-header-right">
+                            <span style="color:#64748b;">📝</span>
+                            <span id="clipperDisplayName" style="color:#38bdf8;font-weight:bold;cursor:pointer;" title="點擊編輯名稱">VPRE</span>
+                            <span id="clipperStatus" class="sync-badge sync-loading">🔴 未連線</span>
+                        </div>
                     </div>
 
-                    <!-- 檔案傳輸區 -->
-                    <div style="margin-top:12px; padding-top:12px; border-top:1px solid #1f2937;">
-                        <div style="font-size:12px; color:#64748b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <!-- Chat Messages -->
+                    <div id="clipperMessages"><div style="color:#4b5563;text-align:center;padding:40px 0;">⏳ 正在連線至 Clipper 伺服器...</div></div>
+
+                    <!-- Input Area -->
+                    <div class="clipper-input-area">
+                        <input type="text" id="clipperInput" placeholder="輸入訊息後按 Enter 發送…">
+                        <button class="btn-start" id="clipperSendBtn">📤 發送</button>
+                        <button class="btn-cancel" id="clipperClearBtn" title="清除本機聊天紀錄" style="padding:10px 14px;font-size:12px;">🗑</button>
+                    </div>
+                    
+                    <!-- Connection Bar -->
+                    <div class="clipper-connect-bar">
+                        <span>🌐</span>
+                        <input type="text" id="clipperServerUrl" value="ws://localhost:8765" style="width:180px;">
+                        <span>🔑</span>
+                        <input type="text" id="clipperRoomCode" value="1234" style="width:70px;">
+                        <button class="btn-ctrl btn-export-ui" onclick="handleClipperConnect()">🔗 連線</button>
+                        <span style="flex:1;"></span>
+                        <span id="clipperFileStatus" style="font-size:10px;color:#64748b;">就緒</span>
+                    </div>
+
+                    <!-- File Transfer -->
+                    <div class="clipper-file-section">
+                        <div style="font-size:12px;color:#64748b;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
                             <span>📁 檔案傳輸</span>
                             <span style="flex:1;"></span>
-                            <span id="clipperFileStatus" style="font-size:10px;">就緒</span>
+                            <button class="btn-sync" onclick="document.getElementById('fileQueue').innerHTML=''" style="font-size:10px;padding:2px 8px;">🗑 清除</button>
                         </div>
-                        <!-- 傳送對象選擇 (先選目標再傳檔) -->
-                        <div id="clipperTargetArea" style="display:none;">
-                            <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">📤 傳送對象（點擊選取）：</div>
-                            <div id="clipperPeerTargets" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;"></div>
+                        <div id="clipperTargetArea">
+                            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">📤 傳送對象（點擊選取）：</div>
+                            <div id="clipperPeerTargets" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"></div>
                         </div>
-                        <!-- 拖放區 -->
-                        <div id="fileDropZone"
-                             style="border:2px dashed #334155; border-radius:8px; padding:20px; text-align:center; cursor:pointer; color:#94a3b8; font-size:13px;">
-                            📁 拖曳檔案至此處，或點擊選擇檔案
-                        </div>
+                        <div id="fileDropZone" class="file-drop-zone">📁 拖曳檔案至此處，或點擊選擇檔案</div>
                         <input type="file" id="fileInput" multiple hidden>
-                        <!-- 檔案佇列 + 進度條 -->
                         <div id="fileQueue" style="margin-top:6px;"></div>
                     </div>
                 </div><script src="/static/clipper-sdk.js"></script>
@@ -834,7 +830,7 @@ setTimeout(function() {
     }
 
     function markDirty() {
-        // 同步儲存到 localStorage
+        // 同步儲存到 localStorage（單一寫入點）
         try {
             localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
             localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
@@ -842,12 +838,11 @@ setTimeout(function() {
         } catch(e) {}
         const indicator = document.getElementById('dataDirtyIndicator');
         if (indicator) indicator.innerText = '✅ 已儲存';
+        refreshJsonInspectorProbe();
     }
 
     function _cacheToLocalStorage() {
-        localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
-        localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
-        localStorage.setItem('county_config_v8', JSON.stringify(appConfig || {}));
+        // 僅保留探針刷新（實際寫入由 markDirty() 統一處理）
         refreshJsonInspectorProbe();
     }
 
@@ -2038,6 +2033,11 @@ setTimeout(function() {
         const savedClipperName = localStorage.getItem('vcc_clipper_name') || 'VPRE';
         const clipperDisplayNameEl = document.getElementById('clipperDisplayName');
         if (clipperDisplayNameEl) clipperDisplayNameEl.textContent = savedClipperName;
+        // Restore persisted Clipper URL and room
+        var savedClipperUrl = localStorage.getItem('county_clipper_url');
+        var savedClipperRoom = localStorage.getItem('county_clipper_room');
+        if (savedClipperUrl) document.getElementById('clipperServerUrl').value = savedClipperUrl;
+        if (savedClipperRoom) document.getElementById('clipperRoomCode').value = savedClipperRoom;
 
         // 先從 API 載入資料，失敗則從 localStorage 降級
         loadFromServer().then(function() {
@@ -2583,7 +2583,7 @@ setTimeout(function() {
     }
 
     function saveToLocalStorage() {
-        _cacheToLocalStorage();
+        // 單一寫入點：markDirty() 負責寫入 localStorage + 刷新探針
         markDirty();
     }
 
@@ -3193,7 +3193,7 @@ setTimeout(function() {
             masterScheduleDB.push(newProg);
             writeLog("新增跨期編排節目 [" + name + "] 成功。");
         }
-        _cacheToLocalStorage();
+        saveToLocalStorage();
         renderGUICalendar();
         calculateMCRTrafficSummary();
         renderRundownUI();
@@ -3300,7 +3300,7 @@ setTimeout(function() {
         if (!confirm("確定刪除此節目？")) return;
         API.deleteSchedule(id).catch(function() {});
         masterScheduleDB = masterScheduleDB.filter(function(p) { return p.id !== id; });
-        _cacheToLocalStorage();
+        saveToLocalStorage();
         renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
         scheduleMatrixRecalc();
     }
@@ -4317,12 +4317,25 @@ setTimeout(function() {
 
     // Stub: broadcast a JSON string to all peers in the current room
     window.broadcastToPeers = function(jsonStr) {
-        if (!window.clipperModules || !window.clipperModules.ws || !APP.state.room) return;
+        if (!window.clipperModules || !window.clipperModules.ws || !APP.state.room) {
+            console.warn('[Clipper] broadcastToPeers skipped: no room/ws');
+            return;
+        }
         try {
             var data = JSON.parse(jsonStr);
             data.from = APP.state.displayName;
-            window.clipperModules.ws.send({ type: 'relay-data', room: APP.state.room, data: data });
-        } catch(e) {}
+            var ws = window.clipperModules.ws;
+            // relay-data requires a 'to' field — send to each peer individually
+            APP.state.peers.forEach(function(peer, pid) {
+                ws.send({ type: 'relay-data', room: APP.state.room, to: pid, data: data });
+            });
+            // Also send chat-backup to server for persistence (no 'to' needed)
+            if (data.type === 'chat' && data.text) {
+                ws.send({ type: 'chat-backup', room: APP.state.room, text: data.text, from: data.from, timestamp: data.timestamp || Date.now() });
+            }
+        } catch(e) {
+            console.warn('[Clipper] broadcastToPeers error:', e);
+        }
     };
 
     // Stub: send JSON string to specific peers
@@ -4402,13 +4415,13 @@ setTimeout(function() {
                 statusEl.textContent = '🟢 已連線';
                 statusEl.className = 'sync-badge sync-success';
             }
+            // Sync APP.state.ws for ChatModule compatibility
+            APP.state.ws = wsManager._ws;
             // Join room
             var room = document.getElementById('clipperRoomCode').value.trim() || '1234';
             var dn = document.getElementById('clipperDisplayName').textContent.trim() || 'VPRE';
             APP.state.displayName = dn;
             wsManager.send({ type: 'join', room: room, displayName: dn });
-            // Update connect buttons
-            var btns = document.querySelectorAll('#clipperServerUrl, #clipperRoomCode');
         });
         bus.on('disconnected', function(d) {
             var statusEl = document.getElementById('clipperStatus');
@@ -4416,37 +4429,64 @@ setTimeout(function() {
                 statusEl.textContent = d.wasIntentional ? '🔴 已中斷' : '🔴 未連線';
                 statusEl.className = 'sync-badge sync-loading';
             }
+            if (d.wasIntentional) APP.state.ws = null;
         });
+        bus.on('reconnected', function() {
+            APP.state.ws = wsManager._ws;
+            // Re-join room after auto-reconnect
+            var room = document.getElementById('clipperRoomCode').value.trim() || '1234';
+            var dn = document.getElementById('clipperDisplayName').textContent.trim() || 'VPRE';
+            wsManager.send({ type: 'join', room: room, displayName: dn });
+            var statusEl = document.getElementById('clipperStatus');
+            if (statusEl) { statusEl.textContent = '🟢 已重新連線'; statusEl.className = 'sync-badge sync-success'; }
+        });
+
+        // Helper: update peer tracking from a peer list array
+        function _applyPeerList(peerList) {
+            if (!peerList) return;
+            APP.state.peers = new Map();
+            APP.state.peerNames = new Map();
+            peerList.forEach(function(p) {
+                var pid = p.peerId || p.id;
+                var pn = p.displayName || p.name || '成員';
+                if (pid && pid !== APP.state.peerId) {
+                    APP.state.peers.set(pid, { displayName: pn });
+                    APP.state.peerNames.set(pid, pn);
+                }
+            });
+            updateClipperPeerTargetUI();
+            updateClipperPeerCount();
+        }
 
         // Handle server messages
         wsManager.onMessage('joined', function(data) {
             APP.state.peerId = data.peerId;
             APP.state.room = data.room;
-            // Initialize peer list from joined data
-            var peers = data.peers || [];
-            APP.state.peers = new Map();
-            APP.state.peerNames = new Map();
-            peers.forEach(function(p) {
-                if (p.peerId !== data.peerId) {
-                    APP.state.peers.set(p.peerId, { displayName: p.displayName || '成員' });
-                    APP.state.peerNames.set(p.peerId, p.displayName || '成員');
-                }
-            });
             chatModule.appendSystemMessage('✅ 已加入房間 [' + data.room + ']');
-            updateClipperPeerTargetUI();
+            // peers come in a separate 'room_peers' message
+            updateClipperPeerCount();
         }, 'clipper');
 
-        wsManager.onMessage('peer-joined', function(data) {
+        wsManager.onMessage('room_peers', function(data) {
+            _applyPeerList(data.peers);
+        }, 'clipper');
+
+        wsManager.onMessage('peer_list', function(data) {
+            _applyPeerList(data.peers);
+        }, 'clipper');
+
+        wsManager.onMessage('peer_joined', function(data) {
             if (data.peerId && data.peerId !== APP.state.peerId) {
                 var pn = data.displayName || '新成員';
                 APP.state.peers.set(data.peerId, { displayName: pn });
                 APP.state.peerNames.set(data.peerId, pn);
                 chatModule.appendSystemMessage('👤 ' + pn + ' 加入了房間');
                 updateClipperPeerTargetUI();
+                updateClipperPeerCount();
             }
         }, 'clipper');
 
-        wsManager.onMessage('peer-left', function(data) {
+        wsManager.onMessage('peer_left', function(data) {
             var leftName = APP.state.peerNames.get(data.peerId) || '某成員';
             APP.state.peers.delete(data.peerId);
             APP.state.peerNames.delete(data.peerId);
@@ -4455,6 +4495,7 @@ setTimeout(function() {
             }
             chatModule.appendSystemMessage('👋 ' + leftName + ' 離開了房間');
             updateClipperPeerTargetUI();
+            updateClipperPeerCount();
         }, 'clipper');
 
         wsManager.onMessage('peer-updated', function(data) {
@@ -4473,8 +4514,38 @@ setTimeout(function() {
         chatModule.mount(document.getElementById('page-clipper'));
         filesModule.mount(document.getElementById('page-clipper'));
 
+        // Cross-tab notification: show badge when messages arrive off-tab
+        wsManager.onMessage('relay-data', function(data) {
+            if (!data.data || data.data.type !== 'chat') return;
+            if (data.from === APP.state.displayName) return;
+            var clipperPage = document.getElementById('page-clipper');
+            if (!clipperPage || !clipperPage.classList.contains('active')) {
+                window._clipperUnread = (window._clipperUnread || 0) + 1;
+                var badge = document.getElementById('clipperBadge');
+                if (badge) { badge.textContent = window._clipperUnread; badge.className = 'clipper-badge show'; }
+            }
+        }, 'clipper');
+
         window.clipperModules = { bus: bus, ws: wsManager, chat: chatModule, files: filesModule };
+
+        // ⚡ Auto-connect on page load (no click needed)
+        var url = document.getElementById('clipperServerUrl').value.trim() || 'ws://localhost:8765';
+        wsManager._url = url;
+        // Auto connect if we have a persisted URL (user has connected before)
+        if (localStorage.getItem('county_clipper_url')) {
+            wsManager.connect().catch(function() {});
+        }
+
         return window.clipperModules;
+    }
+
+    // Update online peer count display
+    function updateClipperPeerCount() {
+        var el = document.getElementById('clipperPeerCount');
+        if (el) {
+            var count = APP.state.peers ? APP.state.peers.size : 0;
+            el.innerHTML = '👥 <span>' + count + '</span>';
+        }
     }
 
     // Peer target selection UI (for file transfer)
@@ -4536,6 +4607,8 @@ setTimeout(function() {
     // Handle connect button click
     function handleClipperConnect() {
         var url = document.getElementById('clipperServerUrl').value.trim() || 'ws://localhost:8765';
+        var room = document.getElementById('clipperRoomCode').value.trim() || '1234';
+        try { localStorage.setItem('county_clipper_url', url); localStorage.setItem('county_clipper_room', room); } catch(e) {}
         var connectBtns = document.querySelectorAll('[onclick*="handleClipperConnect"]');
         connectBtns.forEach(function(btn) { btn.innerText = '⏳ 連線中...'; btn.disabled = true; });
 
@@ -4560,12 +4633,12 @@ setTimeout(function() {
         }
     }
 
-    // Auto-initialize on page load (deferred)
+    // Auto-initialize on page load (deferred, gives other modules time to settle)
     setTimeout(function() {
         if (!window.clipperModules) {
             initClipperModules();
         }
-    }, 1000);
+    }, 2000);
 
     // Edit display name on click
     document.addEventListener('click', function(e) {
