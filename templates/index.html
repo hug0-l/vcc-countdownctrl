@@ -4135,8 +4135,9 @@
             appendClipperMsg('system', '👤 ' + (peer.displayName || peer.peerId) + ' 加入了房間');
         });
         
-        clipper.on('peer-left', function(peerId) {
-            appendClipperMsg('system', '👋 ' + peerId + ' 離開了房間');
+        clipper.on('peer-left', function(peer) {
+            var leftName = peer.displayName || peer.peerId || '某成員';
+            appendClipperMsg('system', '👋 ' + leftName + ' 離開了房間');
         });
         
         clipper.on('error', function(err) {
