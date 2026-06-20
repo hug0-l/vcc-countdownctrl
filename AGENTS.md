@@ -246,3 +246,32 @@ python3 tests/smoke_test.py
 - Branch: `main`（正式版）
 - Branch: `test`（測試版）
 - Remote: git@github.com:hug0-l/county.git
+
+## 🤖 CI/CD — GitHub Actions
+
+### Build Workflow (`.github/workflows/build.yml`)
+
+| 觸發條件 | 動作 |
+|---------|------|
+| 推送 `v*` tag（如 `v0.9`） | 自動在 Windows + macOS 編譯 PyInstaller 執行檔 |
+| 手動 `workflow_dispatch` | 可從 GitHub Actions tab 手動觸發 |
+
+### 產出
+| 平台 | 檔案 | 路徑 |
+|------|------|------|
+| 🪟 Windows | `County.exe` | `dist/County.exe` |
+| 🍎 macOS | `County` (執行檔) | `dist/County` |
+
+### 觸發方式
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+# → GitHub Actions 自動建置 → Release 自動建立
+```
+
+### Release 流程
+1. 打 tag → push → GitHub Actions 觸發
+2. `build-windows` job: 編譯 `County.exe`
+3. `build-macos` job: 編譯 `County`
+4. `release` job: 自動建立 GitHub Release 並附上兩個產出檔案
+
+> **注意**：Release 由 `softprops/action-gh-release@v2` 自動建立，需確保 `GITHUB_TOKEN` 有 `contents: write` 權限（已在 workflow 中設定）。

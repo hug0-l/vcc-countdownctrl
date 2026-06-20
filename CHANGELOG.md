@@ -1,5 +1,12 @@
 # County — 更新日誌
 
+## v0.9 (2026-06-20)
+- **📦 PyInstaller 打包** — 22MB macOS 執行檔；GitHub Actions 自動編譯 Windows `.exe` + macOS 執行檔
+- **🤖 CI/CD 自動化** — 推送 `v*` tag 觸發 GitHub Actions 建置流程，Windows + macOS 雙平台編譯，自動建立 Release
+- **💬 Clipper IM v2 聊天室 UI** — Google Chat 風格的氣泡對話（self/other/deleted）、引用回覆、載入更多按鈕、頭像 + 已送達 ✓ 勾勾
+- **🎨 Clipper 聊天室響應式佈局** — 手機/小視窗自適應排版
+- **📄 GitHub Actions Workflow** — `.github/workflows/build.yml` 完整 CI/CD pipeline
+
 ## v0.8 (2026-06-20)
 - **🏗️ 模組化重構** — 從單體 SPA (4734行) 拆分為 15 個獨立 JS 模組 + 獨立 CSS
 - **🔌 後端資料驗證 API** — 新增 `/api/schedule/validate`、`/api/preset/validate` + 時段重疊檢測

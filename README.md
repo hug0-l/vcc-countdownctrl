@@ -1,8 +1,10 @@
-# ⚡ County — 廣播排控倒數系統 v0.8
+# ⚡ County — 廣播排控倒數系統 v0.9
 
-![version](https://img.shields.io/badge/version-0.8-blue)
+![version](https://img.shields.io/badge/version-0.9-blue)
 ![python](https://img.shields.io/badge/python-3.10%2B-green)
 ![fastapi](https://img.shields.io/badge/FastAPI-%E2%9C%93-success)
+![build](https://img.shields.io/github/actions/workflow/status/hug0-l/County/.github/workflows/build.yml?branch=main&amp;label=build&amp;logo=github)
+![release](https://img.shields.io/github/v/release/hug0-l/County)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
 一個專為廣播電視台排控中心設計的 **全端節目排程與 Cue 觸發系統**。  
@@ -26,11 +28,22 @@ python server.py
 # 雙擊執行即可，瀏覽器自動開啟
 ```
 
-## 🆕 v0.8 新功能
+### GitHub Actions — 自動編譯 (跨平台)
+每次推送 `v*` tag 時，GitHub Actions 自動在 Windows + macOS 上編譯執行檔並建立 Release。
+
+[![Build Status](https://github.com/hug0-l/County/actions/workflows/build.yml/badge.svg)](https://github.com/hug0-l/County/actions/workflows/build.yml)
+
+| 平台 | 產出 | 觸發方式 |
+|------|------|---------|
+| 🪟 Windows | `County.exe` | `git tag v1.0.0 &amp;&amp; git push origin v1.0.0` |
+| 🍎 macOS | `County` (執行檔) | 同上 |
+
+## 🆕 v0.9 新功能
+- **📦 PyInstaller 打包** — 22MB 單一執行檔，Windows + macOS 雙平台 GitHub Actions 自動編譯
+- **💬 Clipper IM v2 聊天室 UI** — Google Chat 風格的氣泡對話、引用回覆、載入更多、頭像+已送達勾勾
 - **🏗️ 模組化重構** — 從單一 4734 行 SPA 拆分為 15 個獨立模組，故障隔離
 - **🚨 自診斷系統** — 啟動逾時自動顯示錯誤畫面、runtime error Toast、設定頁一鍵健康檢查
 - **🔒 Preset 保護** — 可開關，防止誤刪內建預設集
-- **⏱ Cue 順序排列** — Preset 節點一鍵按時間軸排序，附開始/結束區段視覺分隔
 - **🎨 UX 全面改善** — 頁面動畫、NTP loading、ENGINE 按鈕進度、日期選取器、搜尋清除、Clipper 連線回饋等
 - **🔌 資料驗證 API** — 後端結構化錯誤回傳 + 時程重疊檢測
 - **☁️ API-first 架構** — 後端 SQLite 為主，localStorage 唯讀快取
