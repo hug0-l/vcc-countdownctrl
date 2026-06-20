@@ -1403,7 +1403,6 @@
         appConfig.ntpLastOffset = NTPManager.offset;
         appConfig.ntpLastSyncTime = NTPManager.lastSyncTime || '';
         localStorage.setItem('vcc_pre_config_v8', JSON.stringify(appConfig));
-        markDirty();
         // Also sync to server (non-blocking, fire-and-forget)
         API.saveConfig(appConfig);
     }
@@ -2177,12 +2176,16 @@
                 masterScheduleDB.push({
                     id: "P_INIT_1", name: "晨間新聞精華", broadcastDate: todayStr,
                     startTime: "07:00:00:00", duration: "00:15:00:00",
-                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "pre_broadcast"
+                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31",
+                    presetId: "pre_broadcast", tags: [], colorLabel: '',
+                    _updatedAt: Date.now()
                 });
                 masterScheduleDB.push({
                     id: "P_INIT_2", name: "六點半新聞報導", broadcastDate: todayStr,
                     startTime: "18:30:00:00", duration: "00:30:00:00",
-                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "pre_broadcast"
+                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31",
+                    presetId: "pre_broadcast", tags: [], colorLabel: '',
+                    _updatedAt: Date.now()
                 });
                 saveToLocalStorage();
             }
@@ -2550,6 +2553,10 @@
     function loadDefaultPresets() {
         cuePresets = getDefaultPresets();
         localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+        // Sync default presets to server
+        for (var _pid in cuePresets) {
+            API.savePreset({ id: _pid, name: cuePresets[_pid].name, nodes: cuePresets[_pid].nodes });
+        }
     }
 
     function getCalibratedDate() {
@@ -2638,6 +2645,7 @@
         if (confirm("確定刪除此預設集？")) {
             delete cuePresets[id];
             localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+            API.deletePreset(id);  // sync to server
             masterScheduleDB.forEach(function(p) { if (p.presetId === id) p.presetId = "pre_broadcast"; });
             saveToLocalStorage(); refreshPresetDropdownUI();
             // 重置表單至第一個可用 preset 或空白
@@ -2720,6 +2728,7 @@
             const targetId = selId && cuePresets[selId] ? selId : "preset_" + Date.now();
             cuePresets[targetId] = { name: data.name, nodes: data.nodes };
             localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
+            API.savePreset({ id: targetId, name: data.name, nodes: data.nodes });  // sync to server
             refreshPresetDropdownUI();
             document.getElementById('presetSelector').value = targetId;
             onPresetSelectionChange();
@@ -2982,11 +2991,12 @@
         if (target) {
             target.startTime = newStart;
             target.duration = newDur;
+            target._updatedAt = Date.now();
             saveToLocalStorage();
             calculateMCRTrafficSummary();
             renderRundownUI();
             if (isTrackingActive) calculateGlobalTimelineMatrix(true);
-            writeLog('已快速修改節目 [' + target.name + '] 的開始時間與長度', 'warn');
+            writeLog('已快速修改節目 [' + target.name + '] 的開始時間與長度，CUE 已重新計算', 'warn');
         }
         cancelQuickEdit();
     }
