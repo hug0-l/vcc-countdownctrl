@@ -96,7 +96,7 @@ def init_db():
             periodic_type TEXT DEFAULT 'none',
             periodic_end_date TEXT DEFAULT '',
             periodic_days TEXT DEFAULT '[]',
-            preset_id TEXT DEFAULT 'std_news',
+            preset_id TEXT DEFAULT 'pre_broadcast',
             tags TEXT DEFAULT '[]',
             color_label TEXT DEFAULT '',
             updated_at TEXT DEFAULT ''
@@ -179,7 +179,7 @@ def db_upsert_schedule(data: dict) -> dict:
         (data['id'], data['name'], data.get('broadcastDate', ''),
          data.get('startTime', ''), data.get('duration', ''),
          data.get('periodicType', 'none'), data.get('periodicEndDate', ''),
-         days_json, data.get('presetId', 'std_news'),
+         days_json, data.get('presetId', 'pre_broadcast'),
          tags_json, data.get('colorLabel', ''), now))
     conn.commit()
     conn.close()
@@ -393,7 +393,7 @@ class ScheduleCreate(BaseModel):
     periodicType: str = 'none'
     periodicEndDate: str = ''
     periodicDays: list = []
-    presetId: str = 'std_news'
+    presetId: str = 'pre_broadcast'
     tags: list = []
     colorLabel: str = ''
     updatedAt: str = ''

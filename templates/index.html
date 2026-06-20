@@ -1326,7 +1326,7 @@
             periodicType: s.periodic_type || s.periodicType || 'none',
             periodicEndDate: s.periodic_end_date || s.periodicEndDate || '',
             periodicDays: s.periodic_days || s.periodicDays || [],
-            presetId: s.preset_id || s.presetId || 'std_news',
+            presetId: s.preset_id || s.presetId || 'pre_broadcast',
             tags: s.tags || [],
             colorLabel: s.color_label || s.colorLabel || '',
             _serverUpdatedAt: s.updated_at || '',   // server-side timestamp
@@ -2118,12 +2118,12 @@
                 masterScheduleDB.push({
                     id: "P_INIT_1", name: "晨間新聞精華", broadcastDate: todayStr,
                     startTime: "07:00:00:00", duration: "00:15:00:00",
-                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "std_news"
+                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "pre_broadcast"
                 });
                 masterScheduleDB.push({
                     id: "P_INIT_2", name: "六點半新聞報導", broadcastDate: todayStr,
                     startTime: "18:30:00:00", duration: "00:30:00:00",
-                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "std_news"
+                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31", presetId: "pre_broadcast"
                 });
                 saveToLocalStorage();
             }
@@ -2447,17 +2447,16 @@
         document.getElementById('presetSelector').value = "";
         document.getElementById('presetNameField').value = "自訂邏輯_" + Math.floor(Math.random()*1000);
         renderPresetNodes([
-            { offset: -300, name: "⏳ 開播前五分鐘", freq: 800, soundId: "short_beep" },
-            { offset: -180, name: "⏳ 開播前三分鐘", freq: 800, soundId: "short_beep" },
-            { offset: -60, name: "⏳ 開播前一分鐘", freq: 1000, soundId: "tone" },
-            { offset: -30, name: "🔔 開播前30秒", freq: 1000, soundId: "tone" },
-            { offset: -15, name: "🔔 開播前15秒", freq: 1200, soundId: "triple_beep" },
-            { offset: 0, name: "▶ 開播", freq: 2000, soundId: "alert" },
-            { offset: "e-300", name: "⏳ 結束前五分鐘", freq: 800, soundId: "short_beep" },
-            { offset: "e-180", name: "⏳ 結束前三分鐘", freq: 800, soundId: "short_beep" },
-            { offset: "e-60", name: "⏳ 結束前一分鐘", freq: 1000, soundId: "tone" },
-            { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "tone" },
-            { offset: "e-15", name: "🔔 結束前15秒", freq: 1200, soundId: "triple_beep" },
+            { offset: -300, name: "⏳ 播出前五分", freq: 600, soundId: "bell" },
+            { offset: -180, name: "⏳ 播出前三分", freq: 800, soundId: "short_beep" },
+            { offset: -60, name: "⏳ 播出前一分", freq: 900, soundId: "tone" },
+            { offset: -30, name: "🔔 播出前30秒", freq: 1000, soundId: "double_beep" },
+            { offset: -15, name: "🔔 播出前15秒倒數", freq: 1200, soundId: "triple_beep" },
+            { offset: 0, name: "▶ 播出", freq: 2000, soundId: "alert" },
+            { offset: "e-180", name: "⏳ 結束前三分", freq: 800, soundId: "short_beep" },
+            { offset: "e-60", name: "⏳ 結束前一分", freq: 900, soundId: "tone" },
+            { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
+            { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
             { offset: "e0", name: "■ 結束", freq: 500, soundId: "bell" }
         ]);
         document.getElementById('presetJsonArea').value = '';
@@ -2465,22 +2464,25 @@
 
     function loadDefaultPresets() {
         cuePresets = {
-            "std_news": {
-                name: "標準新聞 (News)",
+            "pre_broadcast": {
+                name: "播出前倒數",
                 nodes: [
-                    { offset: -30, name: "30s 前 (Pre-Air 30s)", freq: 600, soundId: "bell" },
-                    { offset: -5, name: "5s 前 (Pre-Air 5s)", freq: 1000, soundId: "short_beep" },
-                    { offset: 0, name: "▶ 播出 (ON AIR)", freq: 2000, soundId: "alert" },
-                    { offset: "e-5", name: "結尾 5s 前 (Pre-End 5s)", freq: 1000, soundId: "short_beep" },
-                    { offset: "e0", name: "■ 結束 (END)", freq: 450, soundId: "bell" }
+                    { offset: -300, name: "⏳ 播出前五分", freq: 600, soundId: "bell" },
+                    { offset: -180, name: "⏳ 播出前三分", freq: 800, soundId: "short_beep" },
+                    { offset: -60, name: "⏳ 播出前一分", freq: 900, soundId: "tone" },
+                    { offset: -30, name: "🔔 播出前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: -15, name: "🔔 播出前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: 0, name: "▶ 播出", freq: 2000, soundId: "alert" }
                 ]
             },
-            "short_promo": {
-                name: "廣告短片 (Promo)",
+            "pre_end": {
+                name: "結束前倒數",
                 nodes: [
-                    { offset: -2, name: "2s 前 (Cue Host)", freq: 800, soundId: "double_beep" },
-                    { offset: 0, name: "▶ 播出 (ON AIR)", freq: 2200, soundId: "alert" },
-                    { offset: "e0", name: "■ 結束 (END)", freq: 500, soundId: "bell" }
+                    { offset: "e-180", name: "⏳ 結束前三分", freq: 800, soundId: "short_beep" },
+                    { offset: "e-60", name: "⏳ 結束前一分", freq: 900, soundId: "tone" },
+                    { offset: "e-30", name: "🔔 結束前30秒", freq: 1000, soundId: "double_beep" },
+                    { offset: "e-15", name: "🔔 結束前15秒倒數", freq: 1200, soundId: "triple_beep" },
+                    { offset: "e0", name: "■ 結束", freq: 500, soundId: "bell" }
                 ]
             }
         };
@@ -2538,7 +2540,7 @@
             periodicType: prog.periodicType || 'none',
             periodicEndDate: prog.periodicEndDate || '',
             periodicDays: prog.periodicDays || [],
-            presetId: prog.presetId || 'std_news',
+            presetId: prog.presetId || 'pre_broadcast',
             tags: prog.tags || [],
             colorLabel: prog.colorLabel || '',
             updatedAt: prog._updatedAt ? new Date(prog._updatedAt).toISOString() : ''
@@ -2569,11 +2571,11 @@
 
     function deletePresetAction() {
         let id = document.getElementById('presetSelector').value;
-        if (!id || id === "std_news") return;
+        if (!id || id === "pre_broadcast") return;
         if (confirm("確定刪除此預設集？")) {
             delete cuePresets[id];
             localStorage.setItem('vcc_pre_presets_v8', JSON.stringify(cuePresets));
-            masterScheduleDB.forEach(function(p) { if (p.presetId === id) p.presetId = "std_news"; });
+            masterScheduleDB.forEach(function(p) { if (p.presetId === id) p.presetId = "pre_broadcast"; });
             saveToLocalStorage(); refreshPresetDropdownUI();
             // 重置表單至第一個可用 preset 或空白
             const firstKey = Object.keys(cuePresets)[0];
@@ -3052,7 +3054,7 @@
         document.getElementById('durationStr').value = target.duration;
         document.getElementById('periodicType').value = target.periodicType;
         document.getElementById('periodicEndDate').value = target.periodicEndDate || target.broadcastDate;
-        document.getElementById('progPreset').value = target.presetId || "std_news";
+        document.getElementById('progPreset').value = target.presetId || "pre_broadcast";
         setPeriodicDays(target.periodicDays || []);
         // Restore tags & color label
         currentTags = target.tags ? target.tags.slice() : [];
@@ -3112,7 +3114,7 @@
         document.getElementById('durationStr').value = target.duration;
         document.getElementById('periodicType').value = target.periodicType;
         document.getElementById('periodicEndDate').value = target.periodicEndDate || target.broadcastDate;
-        document.getElementById('progPreset').value = target.presetId || "std_news";
+        document.getElementById('progPreset').value = target.presetId || "pre_broadcast";
         setPeriodicDays(target.periodicDays || []);
         currentTags = target.tags ? target.tags.slice() : [];
         renderTagList();
@@ -3405,7 +3407,7 @@
             prog.endTotalFrames = endFrames;
             progDurations[prog.name] = { startFrames: startFrames, endFrames: endFrames, progName: prog.name };
 
-            const targetPreset = cuePresets[prog.presetId] ? cuePresets[prog.presetId] : cuePresets["std_news"];
+            const targetPreset = cuePresets[prog.presetId] ? cuePresets[prog.presetId] : cuePresets["pre_broadcast"];
 
             targetPreset.nodes.forEach(function(node) {
                 let nodeTargetFrames = 0;
