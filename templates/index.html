@@ -782,6 +782,44 @@
         if (indicator) indicator.innerText = '✅ 已儲存';
     }
 
+    function _cacheToLocalStorage() {
+        localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
+        localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
+        localStorage.setItem('county_config_v8', JSON.stringify(appConfig || {}));
+        refreshJsonInspectorProbe();
+    }
+
+    function _loadFromLocalStorage() {
+        var raw = localStorage.getItem('county_master_db_v8');
+        if (raw) { try { masterScheduleDB = JSON.parse(raw); } catch(e) { masterScheduleDB = []; } }
+    }
+
+    function _loadPresetsFromLocal() {
+        var raw = localStorage.getItem('county_presets_v8');
+        if (raw) {
+            try {
+                cuePresets = JSON.parse(raw);
+                if (cuePresets["std_news"] || cuePresets["short_promo"]) {
+                    delete cuePresets["std_news"];
+                    delete cuePresets["short_promo"];
+                    var _mNew = getDefaultPresets();
+                    for (var _mk in _mNew) { if (!cuePresets[_mk]) cuePresets[_mk] = _mNew[_mk]; }
+                    localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
+                }
+            } catch(e) { loadDefaultPresets(); }
+        } else { loadDefaultPresets(); }
+    }
+
+    function _loadConfigFromLocal() {
+        var raw = localStorage.getItem('county_config_v8');
+        if (raw) {
+            try { appConfig = JSON.parse(raw); } catch(e) { appConfig = defaultConfig(); }
+        } else {
+            appConfig = defaultConfig();
+        }
+        frameRate = appConfig.frameRate || 25;
+    }
+
     function updateFileStatus(text) {
         let el = document.getElementById('fileStatus');
         if (el) el.innerText = text;
@@ -825,10 +863,6 @@
                     } catch(err) { alert('檔案解析錯誤: ' + err.message); }
                 };
                 reader.readAsText(file);
-            }
-        });
-        input.value = '';
-    }
 
     function saveDataToFile(silent) {
         // Try API download first; fallback to localStorage export
@@ -860,8 +894,6 @@
     // ===== 全域狀態變數 =====
     let timerInterval = null;        // (legacy, replaced by _masterTimer)
     var _masterTimer = null;         // 單一主時脈 40ms 定時器（負責時鐘 + 引擎）
-    var _syncInProgress = false;     // syncAllToServer 防重入旗標
-    var _saveThrottle = null;        // saveToLocalStorage 防抖
     let audioCtx = null;             // 共用 AudioContext（所有提示音）
     let timeOffset = 0;              // 時區偏移（預設 1ms = 使用本地時鐘）
     let isTrackingActive = false;    // ENGINE 是否正在運作
@@ -1794,6 +1826,45 @@
         }
     }
 
+    async function loadFromServer() {
+        try {
+            const [schedules, presets, config] = await Promise.all([
+                API.loadSchedules().catch(function() { return null; }),
+                API.loadPresets().catch(function() { return null; }),
+                API.loadConfig().catch(function() { return null; })
+            ]);
+            if (schedules && schedules.length > 0) {
+                masterScheduleDB = schedules.map(normalizeScheduleFromApi);
+                localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
+            } else {
+                _loadFromLocalStorage();
+            }
+            if (presets && presets.length > 0) {
+                cuePresets = {};
+                presets.forEach(function(p) { cuePresets[p.id] = normalizePresetFromApi(p); });
+                localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
+            } else {
+                _loadPresetsFromLocal();
+            }
+            if (config && config.frameRate) {
+                frameRate = parseInt(config.frameRate) || 25;
+                appConfig = config;
+                localStorage.setItem('county_config_v8', JSON.stringify(config));
+                if (config.clipper_name) {
+                    localStorage.setItem('vcc_clipper_name', config.clipper_name);
+                    var dn = document.getElementById('clipperDisplayName');
+                    if (dn) dn.textContent = config.clipper_name;
+                }
+            } else {
+                _loadConfigFromLocal();
+            }
+        } catch(e) {
+            _loadFromLocalStorage();
+            _loadPresetsFromLocal();
+            _loadConfigFromLocal();
+        }
+    }
+
     window.onload = function() {
         writeLog("County 系統初始化...", 'info');
 
@@ -1805,26 +1876,34 @@
         // 載入儲存的設定（FPS、beep、上次日期等）
         loadConfig();
 
-        // 從 localStorage 載入（同步快速啟動），非同步從 IndexedDB 補齊
-        // 載入 Preset，若有舊版 std_news 則遷移至新 Preset
-        const localPresets = localStorage.getItem('county_presets_v8');
-        if (localPresets) {
-            try {
-                cuePresets = JSON.parse(localPresets);
-                // Migration: replace old std_news/short_promo with new presets
-                if (cuePresets["std_news"] || cuePresets["short_promo"]) {
-                    delete cuePresets["std_news"];
-                    delete cuePresets["short_promo"];
-                    var _mNew = getDefaultPresets();
-                    for (var _mk in _mNew) { if (!cuePresets[_mk]) cuePresets[_mk] = _mNew[_mk]; }
-                    localStorage.setItem('county_presets_v8', JSON.stringify(cuePresets));
-                }
-            } catch(e) { loadDefaultPresets(); }
-        } else { loadDefaultPresets(); }
-        const localDB = localStorage.getItem('county_master_db_v8');
-        if (localDB) { try { masterScheduleDB = JSON.parse(localDB); } catch(e) { masterScheduleDB = []; } }
-        
-        // 使用 localStorage 資料，無 IndexedDB
+        // 先從 API 載入資料，失敗則從 localStorage 降級
+        loadFromServer().then(function() {
+            // Data loaded, proceed with rendering
+            refreshPresetDropdownUI();
+            if (masterScheduleDB.length === 0) {
+                masterScheduleDB.push({
+                    id: "P_INIT_1", name: "晨間新聞精華", broadcastDate: todayStr,
+                    startTime: "07:00:00:00", duration: "00:15:00:00",
+                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31",
+                    presetId: "pre_broadcast", tags: [], colorLabel: '',
+                    _updatedAt: Date.now()
+                });
+                masterScheduleDB.push({
+                    id: "P_INIT_2", name: "六點半新聞報導", broadcastDate: todayStr,
+                    startTime: "18:30:00:00", duration: "00:30:00:00",
+                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31",
+                    presetId: "pre_broadcast", tags: [], colorLabel: '',
+                    _updatedAt: Date.now()
+                });
+                saveToLocalStorage();
+            }
+
+            document.getElementById('startTimeStr').value = dateToTimecode(getCalibratedDate());
+            renderColorPicker(0);
+            onGlobalDateChange();
+            onPresetSelectionChange();
+            checkNtpStatus();
+        });
 
         // 填入時區下拉選項
         const tzEl = document.getElementById('cfgTimezone');
@@ -1856,38 +1935,10 @@
         if (clipperDisplayNameEl) clipperDisplayNameEl.textContent = savedClipperName;
 
 
-        // 修復核心：將依賴時間基準與資料庫初始化的代碼全部歸入 Asynchronous Callback 作用域中
+        // NTP 時間同步（非阻塞，保留現有 offset）
         syncWithNetworkTime(function() {
-            const now = getCalibratedDate();
-            // 資料已從 localStorage 載入（見上方），此處不再重複讀取
-            refreshPresetDropdownUI();
-
-            // 若無排程資料則注入種子範例
-            if (localDB) {
-                // 已有資料，什麼都不做
-            } else {
-                masterScheduleDB.push({
-                    id: "P_INIT_1", name: "晨間新聞精華", broadcastDate: todayStr,
-                    startTime: "07:00:00:00", duration: "00:15:00:00",
-                    periodicType: "weekdays", periodicEndDate: new Date().getFullYear() + "-12-31",
-                    presetId: "pre_broadcast", tags: [], colorLabel: '',
-                    _updatedAt: Date.now()
-                });
-                masterScheduleDB.push({
-                    id: "P_INIT_2", name: "六點半新聞報導", broadcastDate: todayStr,
-                    startTime: "18:30:00:00", duration: "00:30:00:00",
-                    periodicType: "daily", periodicEndDate: new Date().getFullYear() + "-12-31",
-                    presetId: "pre_broadcast", tags: [], colorLabel: '',
-                    _updatedAt: Date.now()
-                });
-                saveToLocalStorage();
-            }
-
-            document.getElementById('startTimeStr').value = dateToTimecode(getCalibratedDate());
-            renderColorPicker(0);
-            onGlobalDateChange();
-            onPresetSelectionChange();
-            checkNtpStatus();
+            updateNtpStatusUI();
+            restartAutoSync();
         });
 
         // Create single master timer — handles clock + engine in one tick
@@ -2326,51 +2377,9 @@
         return totalFramesToTimecode(sf + df); // HH:MM:SS:FF 完整格式
     }
 
-    function syncAllToServer() {
-        // Guard: only one sync cycle at a time, prevents connection pool saturation
-        if (_syncInProgress) return;
-        _syncInProgress = true;
-        // Sequential async: one request at a time to avoid N+1 fetch storm
-        (async function() {
-            try {
-                for (let i = 0; i < masterScheduleDB.length; i++) {
-                    await API.saveSchedule(formatForServer(masterScheduleDB[i])).catch(function(){});
-                }
-                for (let pid in cuePresets) {
-                    await API.savePreset({ id: pid, name: cuePresets[pid].name, nodes: cuePresets[pid].nodes }).catch(function(){});
-                }
-            } catch(e) {
-                // ignore — fire-and-forget, server may be offline
-            } finally {
-                _syncInProgress = false;
-            }
-        })();
-    }
-
-    function formatForServer(prog) {
-        return {
-            id: prog.id,
-            name: prog.name,
-            broadcastDate: prog.broadcastDate,
-            startTime: prog.startTime,
-            duration: prog.duration,
-            periodicType: prog.periodicType || 'none',
-            periodicEndDate: prog.periodicEndDate || '',
-            periodicDays: prog.periodicDays || [],
-            presetId: prog.presetId || 'pre_broadcast',
-            tags: prog.tags || [],
-            colorLabel: prog.colorLabel || '',
-            updatedAt: prog._updatedAt ? new Date(prog._updatedAt).toISOString() : ''
-        };
-    }
-
     function saveToLocalStorage() {
-        localStorage.setItem('county_master_db_v8', JSON.stringify(masterScheduleDB));
-        refreshJsonInspectorProbe();
+        _cacheToLocalStorage();
         markDirty();
-        // Debounce server sync — only fires 2s after last edit
-        clearTimeout(_saveThrottle);
-        _saveThrottle = setTimeout(syncAllToServer, 2000);
     }
 
     function refreshPresetDropdownUI() {
@@ -2860,6 +2869,12 @@
             const overrideSingle = document.getElementById('chkOverrideSingle').checked;
             let target = masterScheduleDB.find(function(p) { return p.id === currentEditingId; });
             if (target) {
+                var progData = {
+                    id: currentEditingId, name: name, broadcastDate: bDate, startTime: startStr,
+                    duration: durStr, periodicType: pType, periodicEndDate: (pType === 'none' ? '' : pEndDate),
+                    presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: periodicDays
+                };
+                API.updateSchedule(currentEditingId, progData).catch(function() {});
                 if (overrideSingle && target.periodicType !== 'none') {
                     masterScheduleDB.push({
                         id: "P_" + Date.now(), name: name, broadcastDate: bDate, startTime: startStr,
@@ -2879,15 +2894,18 @@
             }
             exitEditMode();
         } else {
-            masterScheduleDB.push({
-                id: "P_" + Date.now(), name: name, broadcastDate: bDate, startTime: startStr,
+            var newId = "P_" + Date.now();
+            var newProg = {
+                id: newId, name: name, broadcastDate: bDate, startTime: startStr,
                 duration: durStr, periodicType: pType, periodicEndDate: (pType === 'none' ? '' : pEndDate),
                 presetId: pid, tags: tags, colorLabel: colorLabel, periodicDays: periodicDays,
                 _updatedAt: Date.now()
-            });
+            };
+            API.saveSchedule(newProg).catch(function() {});
+            masterScheduleDB.push(newProg);
             writeLog("新增跨期編排節目 [" + name + "] 成功。");
         }
-        saveToLocalStorage();
+        _cacheToLocalStorage();
         renderGUICalendar();
         calculateMCRTrafficSummary();
         renderRundownUI();
@@ -2991,14 +3009,11 @@
 
     function deleteProgram(id) {
         if (currentEditingId === id) exitEditMode();
+        API.deleteSchedule(id).catch(function() {});
         masterScheduleDB = masterScheduleDB.filter(function(p) { return p.id !== id; });
-        saveToLocalStorage(); renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
+        _cacheToLocalStorage();
+        renderGUICalendar(); calculateMCRTrafficSummary(); renderRundownUI();
         if (isTrackingActive) calculateGlobalTimelineMatrix(true);
-        // Also delete from server; queue for retry if offline
-        API.deleteSchedule(id).catch(function() {
-            _pendingDeletes.add(id);
-            writeLog('⏳ 刪除已佇列，恢復連線後自動同步', 'warn');
-        });
     }
 
     function clearAllPrograms() {
@@ -4288,6 +4303,7 @@
                 const val = input.value.trim() || 'VPRE';
                 target.textContent = val;
                 localStorage.setItem('vcc_clipper_name', val);
+                API.saveConfig({ clipper_name: val }).catch(function() {});
                 if (clipper && clipper.connected) {
                     clipper.setDisplayName(val);
                 }
