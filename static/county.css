@@ -394,18 +394,18 @@
             text-align:center;
         }
 
-        /* Programme start countdown — teal/cyan scheme */
+        /* Programme start countdown — yellow/amber scheme */
         #homeProgCountdown {
-            background:linear-gradient(135deg, #0f172a 0%, #134e4a 100%);
-            border:2px solid #14b8a6;
-            box-shadow:0 0 24px rgba(20,184,166,0.2);
+            background:linear-gradient(135deg, #0f172a 0%, #422006 100%);
+            border:2px solid #f59e0b;
+            box-shadow:0 0 24px rgba(245,158,11,0.2);
         }
 
-        /* Cue countdown — indigo/purple scheme */
+        /* Cue countdown — red/danger scheme */
         #homeCueCountdown {
-            background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            border:2px solid #818cf8;
-            box-shadow:0 0 24px rgba(129,140,248,0.2);
+            background:linear-gradient(135deg, #0f172a 0%, #3b0a0a 100%);
+            border:2px solid #ef4444;
+            box-shadow:0 0 24px rgba(239,68,68,0.2);
         }
 
         /* --- General spacing --- *//* --- General spacing --- */

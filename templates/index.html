@@ -2606,6 +2606,19 @@ setTimeout(function() {
         return totalFramesToTimecode(sf + df); // HH:MM:SS:FF 完整格式
     }
 
+    // ===== 節目時間衝突檢測（節目不可重疊，Cue 點不影響）=====
+    function hasTimeConflict(broadcastDate, startTime, duration, excludeId) {
+        var startFr = timecodeToTotalFrames(startTime);
+        var endFr = startFr + timecodeToTotalFrames(duration);
+        return masterScheduleDB.some(function(prog) {
+            if (prog.id === excludeId) return false;
+            if (!isProgramActiveOnDate(prog, broadcastDate)) return false;
+            var pStart = timecodeToTotalFrames(prog.startTime);
+            var pEnd = pStart + timecodeToTotalFrames(prog.duration);
+            return startFr < pEnd && pStart < endFr;
+        });
+    }
+
     function saveToLocalStorage() {
         // 單一寫入點：markDirty() 負責寫入 localStorage + 刷新探針
         markDirty();
@@ -3086,6 +3099,14 @@ setTimeout(function() {
         const newStart = document.getElementById('quickStartTime').value;
         const newDur = document.getElementById('quickDuration').value;
         const target = masterScheduleDB.find(function(p) { return p.id === quickEditTargetId; });
+        if (!target) return;
+        // 時間衝突檢測
+        if (hasTimeConflict(target.broadcastDate, newStart, newDur, target.id)) {
+            if (!confirm('⚠️ 快速修改後該時段與其他節目重疊！\n節目時間不可重疊（Cue 點除外）。\n\n是否仍要套用？')) {
+                return;
+            }
+            writeLog('⚠️ 已套用有時序衝突的快速修改', 'warn');
+        }
         if (target) {
             target.startTime = newStart;
             target.duration = newDur;
@@ -3173,6 +3194,16 @@ setTimeout(function() {
         if (!name || !bDate || !startStr || !durStr) { alert("請完整填寫製播欄位！"); return; }
         if (pType !== 'none' && pEndDate < bDate) { alert("重複終止日期不得早於起播生效日期！"); return; }
         if (pType === 'custom' && periodicDays.length === 0) { alert("請至少選擇一天！"); return; }
+
+        // 時間衝突檢測：檢查此節目在該日期是否與其他節目重疊
+        var conflictCheckDate = bDate;
+        var conflictCheckId = currentEditingId; // 編輯時排除自身
+        if (hasTimeConflict(conflictCheckDate, startStr, durStr, conflictCheckId)) {
+            if (!confirm('⚠️ 該時段與其他節目重疊！\n節目時間不可重疊（Cue 點除外）。\n\n是否仍要儲存？')) {
+                return;
+            }
+            writeLog('⚠️ 已儲存有時序衝突的節目 [' + name + ']', 'warn');
+        }
 
         let colorLabel = document.getElementById('progColorLabel').value;
         let tags = currentTags.slice(); // copy
