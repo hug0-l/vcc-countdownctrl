@@ -388,12 +388,23 @@
 
                 /* Cue Countdown Card (moved from inline style) */
         .cue-countdown-card {
-            background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            border:2px solid #818cf8;
             border-radius:10px;
             padding:20px;
             margin-bottom:20px;
             text-align:center;
+        }
+
+        /* Programme start countdown — teal/cyan scheme */
+        #homeProgCountdown {
+            background:linear-gradient(135deg, #0f172a 0%, #134e4a 100%);
+            border:2px solid #14b8a6;
+            box-shadow:0 0 24px rgba(20,184,166,0.2);
+        }
+
+        /* Cue countdown — indigo/purple scheme */
+        #homeCueCountdown {
+            background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border:2px solid #818cf8;
             box-shadow:0 0 24px rgba(129,140,248,0.2);
         }
 
