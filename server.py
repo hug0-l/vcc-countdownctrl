@@ -390,7 +390,10 @@ app.add_middleware(
 )
 
 # Static directory
-BASE_DIR = Path(__file__).parent
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).parent
 BACKUP_DIR = BASE_DIR / "backups"
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(exist_ok=True)
