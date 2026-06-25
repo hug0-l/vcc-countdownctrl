@@ -2,7 +2,7 @@
 
 ## 📌 專案概述
 **County** 是一個廣播電視台排控中心的 **Python 後端 + 前端 SPA** 混合架構。
-- 前端 SPA 集中於 `templates/index.html`（~3800 行）
+- 前端 SPA 集中於 `templates/index.html`（~5600 行）
 - 後端使用 **FastAPI + SQLite + ntplib**（`server.py`）
 - 支援節目排程管理、Cue 提示點觸發、時間軸視覺化。
 
@@ -38,6 +38,8 @@ county/
 │   ├── clipper-module-base.js       # 模組基底
 │   ├── clipper-chat-module.js       # 聊天模組
 │   ├── clipper-files-module.js      # 檔案傳輸模組
+│   ├── county-i18n.js               # i18n 引擎（多國語言、data-i18n DOM繫結、內建繁體中文）
+│   ├── county-i18n-en.js            # English locale（英文語系翻譯）
 │   └── CHANGELOG.md                 # 版本歷史 (static/)
 ├── tests/
 │   └── smoke_test.py                # 整合測試
@@ -53,26 +55,28 @@ county/
 |------|------|------|
 | 1–344 | CSS | 完整 CSS 樣式表（變數、元件、響應式） |
 | 345–973 | HTML | 頁面結構（Sidebar、Status Bar、6 頁分頁） |
-| 976–3375 | JavaScript | 所有邏輯 |
-| 976–1000 | 模組標頭與資料流說明 | 使用區塊註解 |
-| 1001–1115 | 全域變數與初始化 | `appConfig`、`masterScheduleDB`、`cuePresets`、`NTPManager` |
-| 1116–1275 | Config 管理 | `saveConfig()`、`loadConfig()`、JSON 匯出入 |
-| 1276–1305 | Timecode 工具 | `dateToTimecode()`、`timecodeToTotalFrames()`、`totalFramesToTimecode()` |
-| 1306–1330 | 時碼輸入遮罩 | `setupTimecodeMask()` |
-| 1331–1460 | 行事曆 | `renderGUICalendar()`、`moveCalendarMonth()` |
-| 1461–1530 | 週期展開 | `getExpandedRundownForDate()` |
-| 1531–1570 | 日誌系統 | `writeLog()` |
-| 1571–1620 | 週期 UI | 星期選擇、週期類型切換 |
-| 1621–1760 | 行事曆渲染 + 首頁 Traffic | `renderWeekGlance()`、`calculateMCRTrafficSummary()` |
-| 1761–1780 | 音效系統 | `soundPresets`（9 種音效） |
-| 1781–2100 | Preset 節點管理 | `addNodeRow()`、`renderPresetNodes()`、`onPresetSelectionChange()`、`savePresetAction()` |
-| 2101–2140 | 時間校正 | `getCalibratedDate()`、`getTodayStr()` |
-| 2141–2480 | 排程 CRUD | `submitProgramForm()`、`enterEditMode()`、`exitEditMode()`、`deleteProgram()` |
-| 2481–2650 | Rundown 排序與渲染 | `sortRundownTable()`、`renderRundownUI()` |
-| 2651–2900 | 引擎系統 | `initGlobalTracking()`、`calculateGlobalTimelineMatrix()` |
-| 2901–3250 | 儀表板 | `updateGlobalDashboard()`、`homeCueCountdown`、Cue 即時看板 |
-| 3251–3330 | CUE Popup + 音效播放 | `sendCueNotification()`、`playBroadcastBeep()` |
-| 3331–3375 | 開發者選項 + Crash Dump | `applyDevEngineInterval()`、`factoryResetStorage()` 等 |
+| 976–3375 | JavaScript (v0.x) | 原始所有邏輯（已重構） |
+| 976–3375 | JavaScript (v1.1) | 目前已擴展至 ~5600 行，以下為重構後的主要區段 |
+| 830–880 | 工具函數 | `h()` XSS 跳脫、`safeSetItem()` 安全儲存、`showToast()` 通知 |
+| 880–1100 | 資料儲存與 API | `getDataSet()`、`applyDataSet()`、`markDirty()`、API client |
+| 1100–1250 | Config 管理 | `saveConfig()`、`loadConfig()`、`defaultConfig()` |
+| 1250–1350 | Timecode 核心 | `dateToTimecode()`、`timecodeToTotalFrames()`、`totalFramesToTimecode()` |
+| 1350–1450 | 時碼遮罩 + 日誌 | `setupTimecodeMask()`、`writeLog()`、`persistClientLog()` |
+| 1450–1760 | 行事曆 + 週期 | `renderGUICalendar()`、`moveCalendarMonth()`、`renderWeekGlance()` |
+| 1760–1900 | 週期邏輯 + isProgramActiveOnDate | 含 exceptionDates 跳過檢查 |
+| 1900–2150 | ON AIR card + 儀表板 top | `calculateMCRTrafficSummary()`、`updateGlobalDashboard()` 前段 |
+| 2150–2320 | Master timer + 跨頁面倒數 | `updateCountdownsOnly()`、`masterTick()`、`updateStatusBarLine()` |
+| 2320–2700 | Preset 節點管理 | `addNodeRow()`、`renderPresetNodes()`、addItemRow()、savePresetAction() |
+| 2700–2900 | Preset JSON + 預設庫 | `applyPresetJson()`、`getDefaultPresets()`、`loadDefaultPresets()` |
+| 2900–3100 | 排程 CRUD | `submitProgramForm()`、`enterEditMode()`、`exitEditMode()`、`deleteProgram()` |
+| 3100–3400 | 一鍵偏移 + Session Lock | `shiftProgram()`、`undoShiftProgram()`、`updateSessionLockUI()` |
+| 3400–3800 | Rundown 排序/渲染/匯出入 | `sortRundownTable()`、`renderRundownUI()`、`exportRundown()` |
+| 3800–4070 | 清除維護 + 引擎系統 | `maintenanceClearDay()`、`maintenanceClearAll()`、`initGlobalTracking()` |
+| 4070–4600 | 引擎 Matrix + Timeline | `calculateGlobalTimelineMatrix()`、Timeline 軌道渲染、Item 子軌道 |
+| 4600–4800 | 儀表板核心 | `updateGlobalDashboard()` 完整版（ON AIR、Cue、矩陣行） |
+| 4800–5050 | CUE Popup + Alarm Bar + 通知 | `sendCueNotification()`、`showCueAlarm()`、`showNotifyDialog()` |
+| 5050–5200 | 音效 + Preset Item Checklist | `playBroadcastBeep()`、`previewSound()`、`toggleSkipItem()` |
+| 5200–5400 | 開發者選項 + 診斷 + i18n | `applyDevEngineInterval()`、`runSystemDiagnosis()`、`switchLanguage()` |
 
 ## 🕒 NTP 時間服務架構
 
@@ -157,7 +161,7 @@ offset_ms = response.offset * 1000  # seconds → ms
 
 ## 📦 模組載入順序（由 `index.html` 的 `<script>` 標籤順序決定）
 
-所有 JavaScript 模組存放於 `static/` 目錄（共 24 個檔案）。載入順序如下：
+所有 JavaScript 模組存放於 `static/` 目錄（共 24 個檔案）。載入順序如下（`county-i18n.js` 與 `county-i18n-en.js` 為 i18n 引擎，須在 `county-core.js` 之後、其他 county 模組之前）：
 
 | 順序 | 檔案 | 說明 |
 |------|------|------|
@@ -251,6 +255,8 @@ python3 tests/smoke_test.py
 - [ ] Clipper 聊天收發正常
 - [ ] Clipper 檔案傳輸（先選對象 → 拖放 → 進度條 → 自動下載）
 - [ ] Clipper 檔案接收進度條正常更新
+- [ ] 🌐 語言切換（設定頁 → Language 下拉 → English → 側欄立即顯示英文）
+- [ ] 📝 文件雙語檢查（所有新增/修改的文件皆有中英雙語版本）
 - [ ] 🌐 語言切換（設定頁 → Language 下拉 → English → 側欄立即顯示英文）
 - [ ] 📝 文件雙語檢查（所有新增/修改的文件皆有中英雙語版本）
 
